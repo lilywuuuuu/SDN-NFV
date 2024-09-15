@@ -3,7 +3,7 @@ from mininet.topo import Topo
 class Lab1_Topo_110550091( Topo ):
     def __init__(self):
         Topo.__init__(self)
-        # subnet mask = 255.255.255.254
+        # subnet mask = 255.255.255.224
        
         # Add hosts
         h1 = self.addHost('h1', ip='192.168.0.1/27')
