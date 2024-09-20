@@ -20,4 +20,4 @@ class Lab2_Topo_110550091( Topo ):
 		self.addLink(s2, s3)
 		self.addLink(s3, s1)
 		
-topos = { 'topo': Lab2_Topo_110550091}
+topos = { 'mytopo': Lab2_Topo_110550091}
