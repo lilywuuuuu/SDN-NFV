@@ -2,12 +2,12 @@
   "priority": 50000,
   "timeout": 0,
   "isPermanent": true,
-  "deviceId": "of:0000000000000003",
+  "deviceId": "of:0000000000000002",
   "selector": {
     "criteria": [
       {
         "type": "IN_PORT",
-        "port": "2"
+        "port": "3"
       },
       {
 	"type": "ETH_TYPE",
@@ -19,7 +19,7 @@
     "instructions": [
       {
         "type": "OUTPUT",
-        "port": "1"
+        "port": "2"
       }
     ]
   }

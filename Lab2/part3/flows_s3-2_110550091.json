@@ -7,7 +7,7 @@
     "criteria": [
       {
         "type": "IN_PORT",
-        "port": "2"
+        "port": "1"
       },
       {
 	"type": "ETH_TYPE",
@@ -19,7 +19,7 @@
     "instructions": [
       {
         "type": "OUTPUT",
-        "port": "1"
+        "port": "2"
       }
     ]
   }
