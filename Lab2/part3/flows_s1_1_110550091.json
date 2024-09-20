@@ -14,7 +14,7 @@
 		"instructions": [
 			{
 				"type": "OUTPUT",
-				"port": "FLOOD"
+				"port": "STORM"
 			}
 		]
 	}
