@@ -1,8 +1,7 @@
 {
-  "priority": 50000,
+  "priority": 52000,
   "timeout": 0,
   "isPermanent": true,
-  "deviceId": "of:0000000000000001",
   "selector": {
     "criteria": [
       {
@@ -10,8 +9,8 @@
         "port": "3"
       },
       {
-	"type": "ETH_TYPE",
-	"ethType": "0x0806"
+        "type": "ETH_TYPE",
+        "ethType": "0x0806"
       }
     ]
   },
