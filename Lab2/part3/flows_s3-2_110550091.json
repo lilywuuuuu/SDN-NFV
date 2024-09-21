@@ -1,5 +1,5 @@
 {
-  "priority": 51000,
+  "priority": 49000,
   "timeout": 0,
   "isPermanent": true,
   "selector": {

@@ -1,5 +1,5 @@
 {
-  "priority": 52000,
+  "priority": 48000,
   "timeout": 0,
   "isPermanent": true,
   "selector": {
@@ -18,7 +18,7 @@
     "instructions": [
       {
         "type": "OUTPUT",
-        "port": "2"
+        "port": "1"
       }
     ]
   }
