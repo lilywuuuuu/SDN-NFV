@@ -38,6 +38,7 @@ import org.onosproject.net.flow.TrafficTreatment;
 import org.onosproject.net.flowobjective.FlowObjectiveService;
 import org.onosproject.net.flowobjective.ForwardingObjective;
 import org.onosproject.net.flowobjective.DefaultForwardingObjective;
+import org.onosproject.net.flowobjective.Objective;
 
 import org.onosproject.net.packet.PacketPriority;
 import org.onosproject.net.packet.PacketService;
@@ -74,6 +75,9 @@ public class AppComponent {
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY)
     protected FlowRuleService flowRuleService;
+
+    @Reference(cardinality = ReferenceCardinality.MANDATORY)
+    protected FlowObjectiveService flowObjectiveService;
 
     private LearningBridgeProcessor processor = new LearningBridgeProcessor();
     private ApplicationId appId;
