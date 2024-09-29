@@ -165,6 +165,8 @@ public class AppComponent {
                 log.info("MAC address `{}` is missed on `{}`. Flood the packet.", dstMac, recDevId);
 
             } else { // there is a entry store the mapping of dst mac and forwarding port
+                context.treatmentBuilder().setOutput(outPort);
+                packetOut(context);
                 installRule(context, outPort, srcMac, dstMac, recDevId);
                 log.info("MAC address `{}` is matched on `{}`. Install a flow rule.", dstMac, recDevId);
             }
@@ -192,7 +194,6 @@ public class AppComponent {
         TrafficTreatment treatment = DefaultTrafficTreatment.builder()
                 .setOutput(outPort)
                 .build();
-        context.treatmentBuilder().add(treatment);
 
         // create and apply the flow rule
         ForwardingObjective flowRule = DefaultForwardingObjective.builder()
@@ -205,7 +206,6 @@ public class AppComponent {
                 .add();
 
         flowObjectiveService.forward(recDevId, flowRule);
-        packetOut(context);
     }
     // ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
