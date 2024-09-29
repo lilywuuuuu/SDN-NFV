@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present Open Networking Foundation
+ * Copyright 2024-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,63 +13,46 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package nctu.winlab.bridge;
+package nycu.winlab.bridge;
 
 import org.onosproject.cfg.ComponentConfigService;
-import org.osgi.service.component.ComponentContext;
-// OSGI Service Annotation
 import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Deactivate;
-import org.osgi.service.component.annotations.Modified;
 import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.component.annotations.ReferenceCardinality;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import java.util.Dictionary;
-import java.util.Properties;
-import static org.onlab.util.Tools.get;
 
-/* Import Libs*/
-import com.google.common.collect.Maps; //Provided ConcurrentMap Implementation
-import org.onosproject.core.ApplicationId; // Application Identifier
-import org.onosproject.core.CoreService; // Core Service
+import java.util.HashMap;
+import java.util.Map;
 
-// Gain Information about existed flow rules & 
-// Injecting flow rules into the environment
-import org.onosproject.net.flow.FlowRuleService;
-// Selector Entries
-// import org.onosproject.net.flow.TrafficSelector;    // Abstraction of a slice of network traffic
+import com.google.common.collect.Maps;
+import org.onosproject.core.ApplicationId;
+import org.onosproject.core.CoreService;
+
 import org.onosproject.net.flow.DefaultTrafficSelector;
 import org.onosproject.net.flow.DefaultTrafficTreatment;
 import org.onosproject.net.flow.TrafficSelector;
 import org.onosproject.net.flow.TrafficTreatment;
-// Adding Flow Rule
-import org.onosproject.net.flow.FlowRule;
-import org.onosproject.net.flow.FlowRuleOperations;
-import org.onosproject.net.flow.DefaultFlowRule;
-// FlowObjective Service
+
 import org.onosproject.net.flowobjective.FlowObjectiveService;
 import org.onosproject.net.flowobjective.ForwardingObjective;
 import org.onosproject.net.flowobjective.DefaultForwardingObjective;
 
-// Processing Packet Service
-import org.onosproject.net.packet.InboundPacket;
-import org.onosproject.net.packet.OutboundPacket;
-import org.onosproject.net.packet.PacketContext;
-import org.onosproject.net.packet.PacketProcessor;
-import org.onosproject.net.packet.PacketService;
 import org.onosproject.net.packet.PacketPriority;
+import org.onosproject.net.packet.PacketService;
+import org.onosproject.net.packet.PacketProcessor;
+import org.onosproject.net.packet.PacketContext;
+import org.onosproject.net.packet.InboundPacket;
 
-// information used in API
 import org.onlab.packet.Ethernet;
 import org.onlab.packet.MacAddress;
-import org.onosproject.net.ConnectPoint;
-import org.onosproject.net.DeviceId;
-import org.onosproject.net.PortNumber;
 
-import java.util.Map; // use on building MacTable
-import java.util.Optional; // use to specify if it is nullable
+import org.onosproject.net.PortNumber;
+import org.onosproject.net.DeviceId;
+
+import org.onosproject.net.flow.FlowRuleService;
 
 /**
  * Skeletal ONOS application component.
@@ -77,8 +60,15 @@ import java.util.Optional; // use to specify if it is nullable
 @Component(immediate = true)
 public class AppComponent {
 
+    private final Logger log = LoggerFactory.getLogger(getClass());
+
+    /** Some configurable property. */
+
     @Reference(cardinality = ReferenceCardinality.MANDATORY)
     protected ComponentConfigService cfgService;
+
+    @Reference(cardinality = ReferenceCardinality.MANDATORY)
+    protected CoreService coreService;
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY)
     protected PacketService packetService;
@@ -89,121 +79,134 @@ public class AppComponent {
     @Reference(cardinality = ReferenceCardinality.MANDATORY)
     protected FlowObjectiveService flowObjectiveService;
 
-    @Reference(cardinality = ReferenceCardinality.MANDATORY)
-    protected CoreService coreService;
-
-    private int flowTimeout = 30;
-    private int flowPriority = 30;
+    private LearningBridgeProcessor processor = new LearningBridgeProcessor();
     private ApplicationId appId;
-    private BridgeProcessor bridgeProcessor = new BridgeProcessor();
-    protected Map<DeviceId, Map<MacAddress, PortNumber>> forwardingTable = Maps.newConcurrentMap();
-    private final Logger log = LoggerFactory.getLogger(getClass());
+    private Map<DeviceId, Map<MacAddress, PortNumber>> bridgeTable = new HashMap<>();
 
     @Activate
     protected void activate() {
-        appId = coreService.registerApplication("nctu.winlab.bridge"); // register app
-        packetService.addProcessor(bridgeProcessor, PacketProcessor.director(3)); // add processor
-        requestIntercepts(); // request packet in via packet service
-        log.info("Started Learining Bridge.");
+
+        // register your app
+        appId = coreService.registerApplication("nycu.winlab.bridge");
+
+        // add a packet processor to packetService
+        packetService.addProcessor(processor, PacketProcessor.director(2));
+
+        // install a flowrule for packet-in
+        TrafficSelector.Builder selector = DefaultTrafficSelector.builder();
+        selector.matchEthType(Ethernet.TYPE_IPV4);
+        packetService.requestPackets(selector.build(), PacketPriority.REACTIVE, appId);
+
+        log.info("Started");
     }
 
     @Deactivate
     protected void deactivate() {
-        flowRuleService.removeFlowRulesById(appId); // remove all flows installed by this app
-        packetService.removeProcessor(bridgeProcessor); // remove the processor
-        withdrawIntercepts(); // withdraw all request for packet in via packet service
-        log.info("Stopped Learning Bridge.");
-    }
 
-    // Request ARP and ICMP packet in via packet service.
-    private void requestIntercepts() {
-        TrafficSelector.Builder selector = DefaultTrafficSelector.builder();
-        selector.matchEthType(Ethernet.TYPE_IPV4);
-        packetService.requestPackets(selector.build(), PacketPriority.REACTIVE, appId);
+        // remove flowrule installed by your app
+        flowRuleService.removeFlowRulesById(appId);
 
-        selector.matchEthType(Ethernet.TYPE_ARP);
-        packetService.requestPackets(selector.build(), PacketPriority.REACTIVE, appId);
-    }
+        // remove your packet processor
+        packetService.removeProcessor(processor);
+        processor = null;
 
-    // withdraw all request for packet in via packet service
-    private void withdrawIntercepts() {
+        // remove flowrule you installed for packet-in
         TrafficSelector.Builder selector = DefaultTrafficSelector.builder();
         selector.matchEthType(Ethernet.TYPE_IPV4);
         packetService.cancelPackets(selector.build(), PacketPriority.REACTIVE, appId);
 
-        selector.matchEthType(Ethernet.TYPE_ARP);
-        packetService.cancelPackets(selector.build(), PacketPriority.REACTIVE, appId);
+        log.info("Stopped");
     }
 
-    private class BridgeProcessor implements PacketProcessor {
+    private class LearningBridgeProcessor implements PacketProcessor {
         @Override
         public void process(PacketContext context) {
-            if (context.isHandled())
-                return; // stop when meeeting handled packets
-            if (context.inPacket().parsed().getEtherType() != Ethernet.TYPE_IPV4 &&
-                    context.inPacket().parsed().getEtherType() != Ethernet.TYPE_ARP)
+            // Stop processing if the packet has been handled, since we
+            // can't do any more to it.
+            if (context.isHandled()) {
                 return;
-
-            // basic info of packet
+            }
             InboundPacket pkt = context.inPacket();
             Ethernet ethPkt = pkt.parsed();
-            ConnectPoint cp = pkt.receivedFrom();
-            MacAddress srcMac = ethPkt.getSourceMAC(),
-                    dstMac = ethPkt.getDestinationMAC();
-            DeviceId hostID = cp.deviceId();
-            PortNumber inPort = cp.port();
 
-            // if the device has not been recorded, record it
-            forwardingTable.putIfAbsent(hostID, Maps.newConcurrentMap());
+            if (ethPkt == null) {
+                return;
+            }
 
-            // get the forwarding table of the device
-            Map<MacAddress, PortNumber> macTable = forwardingTable.get(hostID);
-            PortNumber outPort = macTable.get(dstMac);
+            DeviceId recDevId = pkt.receivedFrom().deviceId();
+            PortNumber recPort = pkt.receivedFrom().port();
+            MacAddress srcMac = ethPkt.getSourceMAC();
+            MacAddress dstMac = ethPkt.getDestinationMAC();
 
-            // record the source mac address and port
-            macTable.put(srcMac, inPort);
-            log.info("Add an entry to the port table of `{}`. MAC address: `{}` => Port: `{}`.",
-                    hostID, srcMac.toString(), inPort.toString());
+            // rec packet-in from new device, create new table for it
+            if (bridgeTable.get(recDevId) == null) {
+                bridgeTable.put(recDevId, new HashMap<>());
+            }
 
+            // VVVVVVVV TODO VVVVVVVV
+
+            // record new device if it's not in the table
+            bridgeTable.putIfAbsent(recDevId, Maps.newConcurrentMap());
+
+            // the mapping of pkt's src mac and receivedfrom port wasn't store in the table
+            // of the rec device
+            if (bridgeTable.get(recDevId).get(srcMac) == null) {
+                bridgeTable.get(recDevId).put(srcMac, recPort);
+                log.info("Add an entry to the port table of `{}`. MAC address: `{}` => Port: `{}`.", recDevId, srcMac,
+                        recPort);
+
+            }
+
+            PortNumber outPort = bridgeTable.get(recDevId).get(dstMac);
+            // the mapping of dst mac and forwarding port wasn't store in the table of the
+            // rec device
             if (outPort == null) {
-                // if the destination mac address is not recorded, flood
-                packetOut(context, PortNumber.FLOOD);
-                log.info("MAC address `{}` is missed on `{}`. Flood the packet.",
-                        dstMac.toString(), hostID.toString());
-            } else {
-                // if the destination mac address is recorded, forward and install flow rule
-                packetOut(context, outPort);
-                installRule(context, srcMac, dstMac, outPort, hostID);
+                flood(context);
+                log.info("MAC address `{}` is missed on `{}`. Flood the packet.", dstMac, recDevId);
+
+            } else { // there is a entry store the mapping of dst mac and forwarding port
+                installRule(context, outPort, srcMac, dstMac, recDevId);
+                log.info("MAC address `{}` is matched on `{}`. Install a flow rule.", dstMac, recDevId);
             }
         }
-
-        private void installRule(PacketContext context, MacAddress src, MacAddress dst, PortNumber outPort,
-                DeviceId hostID) {
-            // set match field and action
-            TrafficSelector.Builder selectorBuilder = DefaultTrafficSelector.builder();
-            TrafficTreatment.Builder treatmentBuilder = DefaultTrafficTreatment.builder();
-            selectorBuilder.matchEthSrc(src).matchEthDst(dst);
-            treatmentBuilder.setOutput(outPort);
-
-            // set flow rule
-            ForwardingObjective flowRule = DefaultForwardingObjective.builder()
-                    .withSelector(selectorBuilder.build())
-                    .withTreatment(treatmentBuilder.build())
-                    .withPriority(flowPriority)
-                    .withFlag(ForwardingObjective.Flag.VERSATILE)
-                    .fromApp(appId)
-                    .makeTemporary(flowTimeout)
-                    .add();
-
-            flowObjectiveService.forward(hostID, flowRule);
-            log.info("MAC address `{}` is matched on `{}`. Install a flow rule.",
-                    dst.toString(), hostID.toString());
-        }
-
-        // send the packet to the specified port
-        private void packetOut(PacketContext context, PortNumber outPort) {
-            context.treatmentBuilder().setOutput(outPort);
-            context.send();
-        }
     }
+
+    private void flood(PacketContext context) {
+        context.treatmentBuilder().setOutput(PortNumber.FLOOD);
+        packetOut(context);
+    }
+
+    private void packetOut(PacketContext context) {
+        context.send();
+    }
+
+    private void installRule(PacketContext context, PortNumber outPort, MacAddress srcMac, MacAddress dstMac,
+            DeviceId recDevId) {
+        // set match field (selector)
+        TrafficSelector selector = DefaultTrafficSelector.builder()
+                .matchEthSrc(srcMac)
+                .matchEthDst(dstMac)
+                .build();
+
+        // set action field (treatment)
+        TrafficTreatment treatment = DefaultTrafficTreatment.builder()
+                .setOutput(outPort)
+                .build();
+        context.treatmentBuilder().add(treatment);
+
+        // create and apply the flow rule
+        ForwardingObjective flowRule = DefaultForwardingObjective.builder()
+                .withSelector(selector)
+                .withTreatment(treatment)
+                .withPriority(30)
+                .makeTemporary(30)
+                .fromApp(appId)
+                .withFlag(ForwardingObjective.Flag.VERSATILE)
+                .add();
+
+        flowObjectiveService.forward(recDevId, flowRule);
+        packetOut(context);
+    }
+    // ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
 }
