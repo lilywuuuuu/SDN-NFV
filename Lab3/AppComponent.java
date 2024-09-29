@@ -185,16 +185,19 @@ public class AppComponent {
     private void installRule(PacketContext context, PortNumber outPort, MacAddress srcMac, MacAddress dstMac,
             DeviceId recDevId) {
         // set match field (selector)
-        TrafficSelector.Builder selector = DefaultTrafficSelector.builder();
-        selector.matchEthSrc(srcMac).matchEthDst(dstMac);
+        TrafficSelector selector = DefaultTrafficSelector.builder()
+                .matchEthSrc(srcMac)
+                .matchEthDst(dstMac)
+                .build();
 
         // set action field (treatment)
-        TrafficTreatment.Builder treatment = DefaultTrafficTreatment.builder();
-        treatment.setOutput(outPort);
+        TrafficTreatment treatment = DefaultTrafficTreatment.builder()
+                .setOutput(outPort)
+                .build();
 
         // create and apply the flow rule
-        ForwardingObjective flowRule = DefaultForwardingObjective.builder
-                .withSelector(selector.build())
+        ForwardingObjective flowRule = DefaultForwardingObjective.builder()
+                .withSelector(selector)
                 .withTreatment(treatment)
                 .withPriority(30)
                 .makeTemporary(30)
