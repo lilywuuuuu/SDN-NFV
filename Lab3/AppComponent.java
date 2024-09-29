@@ -38,7 +38,6 @@ import org.onosproject.net.flow.TrafficTreatment;
 import org.onosproject.net.flowobjective.FlowObjectiveService;
 import org.onosproject.net.flowobjective.ForwardingObjective;
 import org.onosproject.net.flowobjective.DefaultForwardingObjective;
-import org.onosproject.net.flowobjective.Objective;
 
 import org.onosproject.net.packet.PacketPriority;
 import org.onosproject.net.packet.PacketService;
@@ -144,11 +143,10 @@ public class AppComponent {
                 bridgeTable.put(recDevId, new HashMap<>());
             }
 
-            // VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV TODO
-            // VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV
+            // VVVVVVVV TODO VVVVVVVV
 
-            // Check if a new device, add entry if not present
-            bridgeTable.computeIfAbsent(recDevId, k -> new HashMap<>());
+            // record new device if it's not in the table
+            bridgeTable.putIfAbsent(recDevId, Maps.newConcurrentMap());
 
             // the mapping of pkt's src mac and receivedfrom port wasn't store in the table
             // of the rec device
