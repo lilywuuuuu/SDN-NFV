@@ -31,7 +31,9 @@ import org.onosproject.core.ApplicationId;
 import org.onosproject.core.CoreService;
 
 import org.onosproject.net.flow.DefaultTrafficSelector;
+import org.onosproject.net.flow.DefaultTrafficTreatment;
 import org.onosproject.net.flow.TrafficSelector;
+import org.onosproject.net.flow.TrafficTreatment;
 
 import org.onosproject.net.packet.PacketPriority;
 import org.onosproject.net.packet.PacketService;
@@ -68,7 +70,6 @@ public class AppComponent {
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY)
     protected FlowRuleService flowRuleService;
-
 
     private LearningBridgeProcessor processor = new LearningBridgeProcessor();
     private ApplicationId appId;
@@ -135,25 +136,29 @@ public class AppComponent {
                 bridgeTable.put(recDevId, new HashMap<>());
             }
 
-// VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV      TODO      VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV
+            // VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV TODO
+            // VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV
 
             // Check if a new device, add entry if not present
             bridgeTable.computeIfAbsent(recDevId, k -> new HashMap<>());
 
-            // the mapping of pkt's src mac and receivedfrom port wasn't store in the table of the rec device
+            // the mapping of pkt's src mac and receivedfrom port wasn't store in the table
+            // of the rec device
             if (bridgeTable.get(recDevId).get(srcMac) == null) {
                 bridgeTable.get(recDevId).put(srcMac, recPort);
-                log.info("Add an entry to the port table of `{}`. MAC address: `{}` => Port: `{}`.", recDevId, srcMac, recPort);
+                log.info("Add an entry to the port table of `{}`. MAC address: `{}` => Port: `{}`.", recDevId, srcMac,
+                        recPort);
 
             }
 
             PortNumber outPort = bridgeTable.get(recDevId).get(dstMac);
-            // the mapping of dst mac and forwarding port wasn't store in the table of the rec device
+            // the mapping of dst mac and forwarding port wasn't store in the table of the
+            // rec device
             if (outPort == null) {
                 flood(context);
                 log.info("MAC address `{}` is missed on `{}`. Flood the packet.", dstMac, recDevId);
 
-            } else {  // there is a entry store the mapping of dst mac and forwarding port
+            } else { // there is a entry store the mapping of dst mac and forwarding port
                 installRule(context, outPort, srcMac, dstMac, recDevId);
                 log.info("MAC address `{}` is matched on `{}`. Install a flow rule.", dstMac, recDevId);
             }
@@ -169,28 +174,29 @@ public class AppComponent {
         context.send();
     }
 
-    private void installRule(PacketContext context, PortNumber outPort, MacAddress srcMac, MacAddress dstMac, DeviceId hostID) {
+    private void installRule(PacketContext context, PortNumber outPort, MacAddress srcMac, MacAddress dstMac,
+            DeviceId recDevId) {
         // set match field (selector)
         TrafficSelector.Builder selector = DefaultTrafficSelector.builder();
         selector.matchEthSrc(srcMac).matchEthDst(dstMac);
-        
+
         // set action field (treatment)
         TrafficTreatment.Builder treatment = DefaultTrafficTreatment.builder();
         treatment.setOutput(outPort);
-    
-        // create and apply the flow rule 
-        flowRuleService.applyFlowRules(
-            flowRuleService.buildFlowRule()
-                .forDevice(hostID)
+
+        // create and apply the flow rule
+        ForwardingObjective flowRule = DefaultForwardingObjective.builder
                 .withSelector(selector.build())
-                .withTreatment(treatment.build())
-                .withPriority(30)   // priority 30
-                .makeTemporary(30)  // timeout 30 seconds
+                .withTreatment(treatment)
+                .withPriority(30)
+                .makeTemporary(30)
                 .fromApp(appId)
-                .build()
-        );
+                .withFlag(ForwardingObjective.Flag.VERSATILE)
+                .add();
+
+        flowObjectiveService.forward(recDevId, flowRule);
         packetOut(context);
     }
-// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    // ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 }
