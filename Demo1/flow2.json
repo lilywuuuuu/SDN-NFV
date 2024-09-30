@@ -6,7 +6,7 @@
     "criteria": [
       {
         "type": "IPV4_DST",
-        "ip": "10.0.0.3/32"
+        "ip": "192.168.130.3/27"
       },
       {
         "type": "ETH_TYPE",
