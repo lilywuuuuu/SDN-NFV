@@ -1,29 +1,102 @@
 {
-  "priority": 50000,
-  "timeout": 0,
-  "isPermanent": true,
-  "selector": {
-    "criteria": [
-      {
-        "type": "ETH_TYPE",
-        "ethType": "0x0800"
+  "flows": [
+    {
+      "priority": 50000,
+      "timeout": 0,
+      "isPermanent": true,
+      "selector": {
+        "criteria": [
+          {
+            "type": "ETH_TYPE",
+            "ethType": "0x0800"
+          },
+          {
+            "type": "IPV4_SRC",
+            "ip": "192.168.130.1/27"
+          },
+          {
+            "type": "IPV4_DST",
+            "ip": "192.168.130.3/27"
+          }
+        ]
       },
-      {
-        "type": "IPV4_SRC",
-        "ip": "192.168.130.1/27"
+      "treatment": {
+        "instructions": [
+          {
+            "type": "OUTPUT",
+            "port": "3"
+          }
+        ]
+      }
+    },
+    {
+      "priority": 50000,
+      "timeout": 0,
+      "isPermanent": true,
+      "selector": {
+        "criteria": [
+          {
+            "type": "ETH_TYPE",
+            "ethType": "0x0800"
+          },
+          {
+            "type": "IPV4_SRC",
+            "ip": "192.168.130.3/27"
+          },
+          {
+            "type": "IPV4_DST",
+            "ip": "192.168.130.1/27"
+          }
+        ]
       },
-      {
-        "type": "IPV4_DST",
-        "ip": "192.168.130.3/27"
+      "treatment": {
+        "instructions": [
+          {
+            "type": "OUTPUT",
+            "port": "1"
+          }
+        ]
       }
-    ]
-  },
-  "treatment": {
-    "instructions": [
-      {
-        "type": "OUTPUT",
-        "port": "3"
+    },
+    {
+      "priority": 50000,
+      "timeout": 0,
+      "isPermanent": true,
+      "selector": {
+        "criteria": [
+          {
+            "type": "ETH_TYPE",
+            "ethType": "0x0806"
+          },
+          {
+            "type": "IPV4_DST",
+            "ip": "192.168.130.2/27"
+          }
+        ]
+      },
+      "treatment": {
+        "instructions": []
       }
-    ]
-  }
+    },
+    {
+      "priority": 50000,
+      "timeout": 0,
+      "isPermanent": true,
+      "selector": {
+        "criteria": [
+          {
+            "type": "ETH_TYPE",
+            "ethType": "0x0800"
+          },
+          {
+            "type": "IPV4_DST",
+            "ip": "192.168.130.2/27"
+          }
+        ]
+      },
+      "treatment": {
+        "instructions": []
+      }
+    }
+  ]
 }
