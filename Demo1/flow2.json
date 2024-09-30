@@ -5,16 +5,12 @@
   "selector": {
     "criteria": [
       {
+        "type": "IPV4_DST",
+        "ip": "10.0.0.3/32"
+      },
+      {
         "type": "ETH_TYPE",
         "ethType": "0x0800"
-      },
-      {
-        "type": "IPV4_SRC",
-        "ip": "192.168.130.3/27"
-      },
-      {
-        "type": "IPV4_DST",
-        "ip": "192.168.130.1/27"
       }
     ]
   },
