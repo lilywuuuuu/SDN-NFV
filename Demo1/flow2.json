@@ -18,7 +18,7 @@
     "instructions": [
       {
         "type": "OUTPUT",
-        "port": "1"
+        "port": "3"
       }
     ]
   }
