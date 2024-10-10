@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package nycu.winlab.proxyarp;
+package nycu.winlab.ProxyArp;
 
 import org.onosproject.cfg.ComponentConfigService;
 import org.osgi.service.component.annotations.Activate;
@@ -49,14 +49,13 @@ import org.onlab.packet.ARP;
 
 import org.onosproject.net.PortNumber;
 import org.onosproject.net.DeviceId;
-
+import org.onosproject.net.Port;
 import org.onosproject.net.flow.FlowRuleService;
 
 import org.onlab.packet.IpAddress;
 import java.nio.ByteBuffer;
 
 import org.onosproject.net.device.DeviceService;
-import org.onosproject.net.Port;
 
 /**
  * Proxy ARP ONOS application component.
@@ -66,7 +65,7 @@ public class AppComponent {
 
     private final Logger log = LoggerFactory.getLogger(getClass());
 
-        /** Some configurable property. */
+    /** Some configurable property. */
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY)
     protected ComponentConfigService cfgService;
@@ -101,7 +100,6 @@ public class AppComponent {
         selector.matchEthType(Ethernet.TYPE_IPV4);
         packetService.requestPackets(selector.build(), PacketPriority.REACTIVE, appId);
 
-
         log.info("Started");
     }
 
@@ -127,7 +125,7 @@ public class AppComponent {
 
         @Override
         public void process(PacketContext context) {
-            // Stop processing if the packet has been handled, since we
+            // stop processing if the packet has been handled, since we
             // can't do any more to it.
             if (context.isHandled()) {
                 return;
@@ -140,70 +138,45 @@ public class AppComponent {
             }
 
             ARP arpPkt = (ARP) ethPkt.getPayload();
-            DeviceId deviceId = pkt.receivedFrom().deviceId();
-            PortNumber inPort = pkt.receivedFrom().port();
+            DeviceId recDevId = pkt.receivedFrom().deviceId();
+            PortNumber recPort = pkt.receivedFrom().port();
+            IpAddress srcIP = IpAddress.valueOf(IpAddress.Version.INET, arpPkt.getSenderProtocolAddress());
+            IpAddress dstIP = IpAddress.valueOf(IpAddress.Version.INET, arpPkt.getTargetProtocolAddress());
+            MacAddress srcMac = MacAddress.valueOf(arpPkt.getSenderHardwareAddress());
 
-            IpAddress sourceIp = IpAddress.valueOf(IpAddress.Version.INET, arpPkt.getSenderProtocolAddress());
-            IpAddress targetIp = IpAddress.valueOf(IpAddress.Version.INET, arpPkt.getTargetProtocolAddress());
-            MacAddress sourceMac = MacAddress.valueOf(arpPkt.getSenderHardwareAddress());
-            MacAddress targetMac = MacAddress.valueOf(arpPkt.getTargetHardwareAddress());
-
-            if (arpPkt.getOpCode() == ARP.OP_REQUEST) {
-                // put the mapping of source ip and source mac into arp table
-                if (arpTable.get(sourceIp) == null) {
-                    arpTable.put(sourceIp, sourceMac);
-                }
-                // check if the target ip is in the arp table
-                if (arpTable.get(targetIp) != null) {
-                    // send arp reply
-                    log.info("TABLE HIT. Requested MAC = {}", arpTable.get(targetIp));
-                    sendArpReply(context, sourceIp, targetIp, arpTable.get(targetIp), sourceMac);
-                } else {
-                    // forward the arp request to other ports
+            if (arpPkt.getOpCode() == ARP.OP_REQUEST) { // ARP request
+                // update the ARP table
+                arpTable.put(srcIP, srcMac);
+                MacAddress dstMac = arpTable.get(dstIP);
+                // check if the destination IP is in the table
+                if (dstMac != null) { // table hit -> send ARP reply
+                    log.info("TABLE HIT. Requested MAC = {}", dstMac);
+                    reply(ethPkt, recDevId, recPort, srcIP, dstMac);
+                } else { // table miss -> flood the ARP request
                     log.info("TABLE MISS. Send request to edge ports");
-                    flood(context);
+                    flood(pkt, recDevId, recPort);
                 }
-            } else if (arpPkt.getOpCode() == ARP.OP_REPLY) {
-                // Update ARP table
-                log.info("RECV REPLY. Requested MAC = {}", sourceMac);
-                arpTable.put(sourceIp, sourceMac);
-
+            } else if (arpPkt.getOpCode() == ARP.OP_REPLY) { // ARP reply
+                log.info("RECV REPLY. Requested MAC = {}", srcMac);
+                // update the ARP table
+                arpTable.put(srcIP, srcMac);
                 context.block();
             }
         }
 
-        private void sendArpReply(
-            PacketContext context,
-            IpAddress senderIp,
-            IpAddress targetIp,
-            MacAddress senderMac,
-            MacAddress targetMac) {
-            Ethernet ethReply = ARP.buildArpReply(
-                targetIp.getIp4Address(),
-                senderMac,
-                context.inPacket().parsed());
-            TrafficTreatment treatment = DefaultTrafficTreatment.builder()
-                    .setOutput(context.inPacket().receivedFrom().port())
-                    .build();
-            OutboundPacket packet = new DefaultOutboundPacket(
-                    context.inPacket().receivedFrom().deviceId(),
-                    treatment, ByteBuffer.wrap(ethReply.serialize()));
+        private void reply(Ethernet ethPkt, DeviceId recDevId, PortNumber recPort, IpAddress dstIP, MacAddress dstMac) {
+            Ethernet ethReply = ARP.buildArpReply(dstIP.getIp4Address(), dstMac, ethPkt);
+            TrafficTreatment treatment = DefaultTrafficTreatment.builder().setOutput(recPort).build();
+            OutboundPacket packet = new DefaultOutboundPacket(recDevId, treatment,
+                    ByteBuffer.wrap(ethReply.serialize()));
             packetService.emit(packet);
         }
 
-        private void flood(PacketContext context) {
-            DeviceId deviceId = context.inPacket().receivedFrom().deviceId();
-            PortNumber inPort = context.inPacket().receivedFrom().port();
-
-            for (Port port : deviceService.getPorts(deviceId)) {
-                if (!port.number().equals(inPort)) {
-                    TrafficTreatment treatment = DefaultTrafficTreatment.builder()
-                            .setOutput(port.number())
-                            .build();
-                    OutboundPacket packet = new DefaultOutboundPacket(
-                            deviceId,
-                            treatment,
-                            context.inPacket().unparsed());
+        private void flood(InboundPacket pkt, DeviceId recDevId, PortNumber recPort) {
+            for (Port port : deviceService.getPorts(recDevId)) {
+                if (!port.number().equals(recPort)) {
+                    TrafficTreatment treatment = DefaultTrafficTreatment.builder().setOutput(port.number()).build();
+                    OutboundPacket packet = new DefaultOutboundPacket(recDevId, treatment, pkt.unparsed());
                     packetService.emit(packet);
                 }
             }
