@@ -121,7 +121,7 @@ public class AppComponent {
     private class LearningBridgeProcessor implements PacketProcessor {
         @Override
         public void process(PacketContext context) {
-            // Stop processing if the packet has been handled, since we
+            // stop processing if the packet has been handled, since we
             // can't do any more to it.
             if (context.isHandled()) {
                 return;
