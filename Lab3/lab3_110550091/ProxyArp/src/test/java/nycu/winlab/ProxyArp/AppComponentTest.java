@@ -13,14 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package nycu.winlab.ProxyArp;
+package nycu.winlab.proxyarp;
 
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.onosproject.cfg.ComponentConfigAdapter;
 
-import nycu.winlab.ProxyArp.AppComponent;
+import nycu.winlab.proxyarp.AppComponent;
 
 /**
  * Set of tests of the ONOS application component.

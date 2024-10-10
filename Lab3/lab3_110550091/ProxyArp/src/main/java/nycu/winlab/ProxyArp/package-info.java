@@ -17,4 +17,4 @@
 /** 
 * ONOS application archetype. 
 */
-package nycu.winlab.ProxyArp;
+package nycu.winlab.proxyarp;
