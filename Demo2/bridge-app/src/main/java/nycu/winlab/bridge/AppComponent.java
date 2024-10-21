@@ -39,8 +39,6 @@ import org.onosproject.net.flow.TrafficTreatment;
 import org.onosproject.net.flow.FlowRuleService;
 import org.onosproject.net.flow.FlowRule;
 
-import org.onosproject.net.flowobjective.ForwardingObjective;
-
 import org.onosproject.net.packet.PacketPriority;
 import org.onosproject.net.packet.PacketService;
 import org.onosproject.net.packet.PacketProcessor;
