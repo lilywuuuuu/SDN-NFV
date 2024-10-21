@@ -148,7 +148,7 @@ public class AppComponent {
             // record new device if it's not in the table
             bridgeTable.putIfAbsent(recDevId, Maps.newConcurrentMap());
 
-            // the mapping of pkt's src mac and receivedfrom port wasn't store in the table
+            // the mapping of pkt's src mac and receiving port wasn't store in the table
             // of the rec device
             if (bridgeTable.get(recDevId).get(srcMac) == null) {
                 bridgeTable.get(recDevId).put(srcMac, recPort);
@@ -174,11 +174,13 @@ public class AppComponent {
     }
 
     private void flood(PacketContext context) {
+        // PortNumber.FLOOD: packet should be flooded to all ports except the input port
         context.treatmentBuilder().setOutput(PortNumber.FLOOD);
         packetOut(context);
     }
 
     private void packetOut(PacketContext context) {
+        // sends the packet out according to the treatment
         context.send();
     }
 
@@ -205,6 +207,7 @@ public class AppComponent {
                 .withFlag(ForwardingObjective.Flag.VERSATILE)
                 .add();
 
+        // applies the flow rule to the device
         flowObjectiveService.forward(recDevId, flowRule);
     }
     // ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
