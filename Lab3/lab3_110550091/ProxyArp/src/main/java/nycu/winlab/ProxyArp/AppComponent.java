@@ -34,9 +34,10 @@ import org.onosproject.net.flow.DefaultTrafficSelector;
 import org.onosproject.net.flow.TrafficSelector;
 import org.onosproject.net.flow.TrafficTreatment;
 import org.onosproject.net.flow.DefaultTrafficTreatment;
+import org.onosproject.net.flow.FlowRuleService;
+
 import org.onosproject.net.packet.OutboundPacket;
 import org.onosproject.net.packet.DefaultOutboundPacket;
-
 import org.onosproject.net.packet.PacketPriority;
 import org.onosproject.net.packet.PacketService;
 import org.onosproject.net.packet.PacketProcessor;
@@ -50,7 +51,6 @@ import org.onlab.packet.ARP;
 import org.onosproject.net.PortNumber;
 import org.onosproject.net.DeviceId;
 import org.onosproject.net.Port;
-import org.onosproject.net.flow.FlowRuleService;
 
 import org.onlab.packet.IpAddress;
 import java.nio.ByteBuffer;
@@ -145,21 +145,27 @@ public class AppComponent {
             MacAddress srcMac = MacAddress.valueOf(arpPkt.getSenderHardwareAddress());
 
             if (arpPkt.getOpCode() == ARP.OP_REQUEST) { // ARP request
-                // update the ARP table
+                // proxy ARP learns IP-MAC mappings of the sender
                 arpTable.put(srcIP, srcMac);
+
+                // proxy ARP looks up ARP table (For target IP-MAC mapping)
                 MacAddress dstMac = arpTable.get(dstIP);
-                // check if the destination IP is in the table
-                if (dstMac != null) { // table hit -> send ARP reply
+                if (dstMac != null) {
+                    // table hit -> Packet-Outs ARP Reply (with target MAC) to the sender
                     log.info("TABLE HIT. Requested MAC = {}", dstMac);
                     reply(ethPkt, recDevId, recPort, srcIP, dstMac);
-                } else { // table miss -> flood the ARP request
+                } else {
+                    // table miss -> flood ARP Request to edge ports except the receiving port
                     log.info("TABLE MISS. Send request to edge ports");
                     flood(pkt, recDevId, recPort);
                 }
             } else if (arpPkt.getOpCode() == ARP.OP_REPLY) { // ARP reply
                 log.info("RECV REPLY. Requested MAC = {}", srcMac);
-                // update the ARP table
+
+                // proxy ARP learns IP-MAC mappings of the sender
                 arpTable.put(srcIP, srcMac);
+
+                // block furthur processing to ensure it doesn't trigger additional actions
                 context.block();
             }
         }

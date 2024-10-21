@@ -24,7 +24,6 @@ import org.osgi.service.component.annotations.ReferenceCardinality;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.lang.ModuleLayer.Controller;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -36,6 +35,7 @@ import org.onosproject.net.flow.DefaultTrafficSelector;
 import org.onosproject.net.flow.DefaultTrafficTreatment;
 import org.onosproject.net.flow.TrafficSelector;
 import org.onosproject.net.flow.TrafficTreatment;
+import org.onosproject.net.flow.FlowRuleService;
 
 import org.onosproject.net.flowobjective.FlowObjectiveService;
 import org.onosproject.net.flowobjective.ForwardingObjective;
@@ -53,7 +53,6 @@ import org.onlab.packet.MacAddress;
 import org.onosproject.net.PortNumber;
 import org.onosproject.net.DeviceId;
 
-import org.onosproject.net.flow.FlowRuleService;
 
 /**
  * Skeletal ONOS application component.
@@ -196,7 +195,7 @@ public class AppComponent {
                 .setOutput(outPort)
                 .build();
 
-        // create and apply the flow rule
+        // create and apply the flow rule using FlowObjectiveService
         ForwardingObjective flowRule = DefaultForwardingObjective.builder()
                 .withSelector(selector)
                 .withTreatment(treatment)
@@ -205,8 +204,6 @@ public class AppComponent {
                 .fromApp(appId)
                 .withFlag(ForwardingObjective.Flag.VERSATILE)
                 .add();
-
-        // applies the flow rule to the device
         flowObjectiveService.forward(recDevId, flowRule);
     }
     // ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
