@@ -75,9 +75,6 @@ public class AppComponent {
     @Reference(cardinality = ReferenceCardinality.MANDATORY)
     protected FlowRuleService flowRuleService;
 
-    @Reference(cardinality = ReferenceCardinality.MANDATORY)
-    protected FlowObjectiveService flowObjectiveService;
-
     private LearningBridgeProcessor processor = new LearningBridgeProcessor();
     private ApplicationId appId;
     private Map<DeviceId, Map<MacAddress, PortNumber>> bridgeTable = new HashMap<>();
