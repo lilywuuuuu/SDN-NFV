@@ -24,6 +24,7 @@ import org.osgi.service.component.annotations.ReferenceCardinality;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.lang.ModuleLayer.Controller;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -148,8 +149,7 @@ public class AppComponent {
             // record new device if it's not in the table
             bridgeTable.putIfAbsent(recDevId, Maps.newConcurrentMap());
 
-            // the mapping of pkt's src mac and receiving port wasn't store in the table
-            // of the rec device
+            // controller updates MAC address table with source MAC and incoming port
             if (bridgeTable.get(recDevId).get(srcMac) == null) {
                 bridgeTable.get(recDevId).put(srcMac, recPort);
                 log.info("Add an entry to the port table of `{}`. MAC address: `{}` => Port: `{}`.", recDevId, srcMac,
@@ -157,14 +157,13 @@ public class AppComponent {
 
             }
 
+            // controller looks up MAC address table for destination MAC
             PortNumber outPort = bridgeTable.get(recDevId).get(dstMac);
-            // the mapping of dst mac and forwarding port wasn't store in the table of the
-            // rec device
-            if (outPort == null) {
+            if (outPort == null) { // destination MAC not found: flood the packet
                 flood(context);
                 log.info("MAC address `{}` is missed on `{}`. Flood the packet.", dstMac, recDevId);
 
-            } else { // there is a entry store the mapping of dst mac and forwarding port
+            } else { // destination MAC found: send Packet-out via designated port and install flowrule on switch
                 context.treatmentBuilder().setOutput(outPort);
                 packetOut(context);
                 installRule(context, outPort, srcMac, dstMac, recDevId);
