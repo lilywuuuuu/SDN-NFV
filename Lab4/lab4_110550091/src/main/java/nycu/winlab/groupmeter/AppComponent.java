@@ -15,7 +15,16 @@
  */
 package nycu.winlab.groupmeter;
 
-import org.onosproject.cfg.ComponentConfigService;
+import static org.onosproject.net.config.NetworkConfigEvent.Type.CONFIG_ADDED;
+import static org.onosproject.net.config.NetworkConfigEvent.Type.CONFIG_UPDATED;
+import static org.onosproject.net.config.basics.SubjectFactories.APP_SUBJECT_FACTORY;
+
+import org.onosproject.core.ApplicationId;
+import org.onosproject.core.CoreService;
+import org.onosproject.net.config.ConfigFactory;
+import org.onosproject.net.config.NetworkConfigEvent;
+import org.onosproject.net.config.NetworkConfigListener;
+import org.onosproject.net.config.NetworkConfigRegistry;
 import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Deactivate;
@@ -24,168 +33,58 @@ import org.osgi.service.component.annotations.ReferenceCardinality;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.HashMap;
-import java.util.Map;
-
-import org.onosproject.core.ApplicationId;
-import org.onosproject.core.CoreService;
-
-import org.onosproject.net.flow.DefaultTrafficSelector;
-import org.onosproject.net.flow.TrafficSelector;
-import org.onosproject.net.flow.TrafficTreatment;
-import org.onosproject.net.flow.DefaultTrafficTreatment;
-import org.onosproject.net.flow.FlowRuleService;
-
-import org.onosproject.net.packet.OutboundPacket;
-import org.onosproject.net.packet.DefaultOutboundPacket;
-import org.onosproject.net.packet.PacketPriority;
-import org.onosproject.net.packet.PacketService;
-import org.onosproject.net.packet.PacketProcessor;
-import org.onosproject.net.packet.PacketContext;
-import org.onosproject.net.packet.InboundPacket;
-
-import org.onlab.packet.Ethernet;
-import org.onlab.packet.MacAddress;
-import org.onlab.packet.ARP;
-
-import org.onosproject.net.PortNumber;
-import org.onosproject.net.DeviceId;
-import org.onosproject.net.Port;
-
-import org.onlab.packet.IpAddress;
-import java.nio.ByteBuffer;
-
-import org.onosproject.net.device.DeviceService;
-
-/**
- * Proxy ARP ONOS application component.
- */
+/** Sample Network Configuration Service Application. **/
 @Component(immediate = true)
 public class AppComponent {
 
-    private final Logger log = LoggerFactory.getLogger(getClass());
+  private final Logger log = LoggerFactory.getLogger(getClass());
+  private final HostConfigListener cfgListener = new HostConfigListener();
 
-    /** Some configurable property. */
 
-    @Reference(cardinality = ReferenceCardinality.MANDATORY)
-    protected ComponentConfigService cfgService;
-
-    @Reference(cardinality = ReferenceCardinality.MANDATORY)
-    protected CoreService coreService;
-
-    @Reference(cardinality = ReferenceCardinality.MANDATORY)
-    protected PacketService packetService;
-
-    @Reference(cardinality = ReferenceCardinality.MANDATORY)
-    protected FlowRuleService flowRuleService;
-
-    @Reference(cardinality = ReferenceCardinality.MANDATORY)
-    protected DeviceService deviceService;
-
-    private ProxyArpProcessor processor = new ProxyArpProcessor();
-    private ApplicationId appId;
-    private Map<IpAddress, MacAddress> arpTable = new HashMap<>();
-
-    @Activate
-    protected void activate() {
-
-        // register your app
-        appId = coreService.registerApplication("nycu.winlab.proxyarp");
-
-        // add a packet processor to packetService
-        packetService.addProcessor(processor, PacketProcessor.director(2));
-
-        // install a flowrule for packet-in
-        TrafficSelector.Builder selector = DefaultTrafficSelector.builder();
-        selector.matchEthType(Ethernet.TYPE_IPV4); // ARP
-        packetService.requestPackets(selector.build(), PacketPriority.REACTIVE, appId);
-
-        log.info("Started");
+  private final ConfigFactory<ApplicationId, HostConfig> factory = new ConfigFactory<ApplicationId, HostConfig>(
+      APP_SUBJECT_FACTORY, HostConfig.class, "informations") {
+    @Override
+    public HostConfig createConfig() {
+      return new HostConfig();
     }
+  };
 
-    @Deactivate
-    protected void deactivate() {
+  private ApplicationId appId;
 
-        // remove flowrule installed by your app
-        flowRuleService.removeFlowRulesById(appId);
+  @Reference(cardinality = ReferenceCardinality.MANDATORY)
+  protected NetworkConfigRegistry cfgService;
 
-        // remove your packet processor
-        packetService.removeProcessor(processor);
-        processor = null;
+  @Reference(cardinality = ReferenceCardinality.MANDATORY)
+  protected CoreService coreService;
 
-        // remove flowrule you installed for packet-in
-        TrafficSelector.Builder selector = DefaultTrafficSelector.builder();
-        selector.matchEthType(Ethernet.TYPE_IPV4); // ARP
-        packetService.cancelPackets(selector.build(), PacketPriority.REACTIVE, appId);
+  @Activate
+  protected void activate() {
+    appId = coreService.registerApplication("nycu.winlab.groupmeter");
+    cfgService.addListener(cfgListener);
+    cfgService.registerConfigFactory(factory);
+    log.info("Started");
+  }
 
-        log.info("Stopped");
+  @Deactivate
+  protected void deactivate() {
+    cfgService.removeListener(cfgListener);
+    cfgService.unregisterConfigFactory(factory);
+    log.info("Stopped");
+  }
+
+  private class HostConfigListener implements NetworkConfigListener {
+    @Override
+    public void event(NetworkConfigEvent event) {
+      if ((event.type() == CONFIG_ADDED || event.type() == CONFIG_UPDATED)
+          && event.configClass().equals(HostConfig.class)) {
+        HostConfig config = cfgService.getConfig(appId, HostConfig.class);
+        if (config != null) {
+          log.info("ConnectPoint_h1: {}, ConnectPoint_h2: {}", config.host1(), config.host2());
+          log.info("MacAddress_h1: {}, MacAddress _h2: {}", config.mac1(), config.mac2());
+          log.info("IpAddress_h1: {}, IpAddress_h2: {}", config.ip1(), config.ip2());
+        }
+      }
     }
-
-    private class ProxyArpProcessor implements PacketProcessor {
-
-        @Override
-        public void process(PacketContext context) {
-            // stop processing if the packet has been handled, since we
-            // can't do any more to it.
-            if (context.isHandled()) {
-                return;
-            }
-            InboundPacket pkt = context.inPacket();
-            Ethernet ethPkt = pkt.parsed();
-
-            if (ethPkt == null || !(ethPkt.getPayload() instanceof ARP)) {
-                return;
-            }
-
-            ARP arpPkt = (ARP) ethPkt.getPayload();
-            DeviceId recDevId = pkt.receivedFrom().deviceId();
-            PortNumber recPort = pkt.receivedFrom().port();
-            IpAddress srcIP = IpAddress.valueOf(IpAddress.Version.INET, arpPkt.getSenderProtocolAddress());
-            IpAddress dstIP = IpAddress.valueOf(IpAddress.Version.INET, arpPkt.getTargetProtocolAddress());
-            MacAddress srcMac = MacAddress.valueOf(arpPkt.getSenderHardwareAddress());
-
-            if (arpPkt.getOpCode() == ARP.OP_REQUEST) { // ARP request
-                // proxy ARP learns IP-MAC mappings of the sender
-                arpTable.put(srcIP, srcMac);
-
-                // proxy ARP looks up ARP table (For target IP-MAC mapping)
-                MacAddress dstMac = arpTable.get(dstIP);
-                if (dstMac != null) {
-                    // table hit -> Packet-Outs ARP Reply (with target MAC) to the sender
-                    log.info("TABLE HIT. Requested MAC = {}", dstMac);
-                    reply(ethPkt, recDevId, recPort, srcIP, dstMac);
-                } else {
-                    // table miss -> flood ARP Request to edge ports except the receiving port
-                    log.info("TABLE MISS. Send request to edge ports");
-                    flood(pkt, recDevId, recPort);
-                }
-            } else if (arpPkt.getOpCode() == ARP.OP_REPLY) { // ARP reply
-                log.info("RECV REPLY. Requested MAC = {}", srcMac);
-
-                // proxy ARP learns IP-MAC mappings of the sender
-                arpTable.put(srcIP, srcMac);
-
-                // block furthur processing to ensure it doesn't trigger additional actions
-                context.block();
-            }
-        }
-
-        private void reply(Ethernet ethPkt, DeviceId recDevId, PortNumber recPort, IpAddress dstIP, MacAddress dstMac) {
-            Ethernet ethReply = ARP.buildArpReply(dstIP.getIp4Address(), dstMac, ethPkt);
-            TrafficTreatment treatment = DefaultTrafficTreatment.builder().setOutput(recPort).build();
-            OutboundPacket packet = new DefaultOutboundPacket(recDevId, treatment,
-                    ByteBuffer.wrap(ethReply.serialize()));
-            packetService.emit(packet);
-        }
-
-        private void flood(InboundPacket pkt, DeviceId recDevId, PortNumber recPort) {
-            for (Port port : deviceService.getPorts(recDevId)) {
-                if (!port.number().equals(recPort)) {
-                    TrafficTreatment treatment = DefaultTrafficTreatment.builder().setOutput(port.number()).build();
-                    OutboundPacket packet = new DefaultOutboundPacket(recDevId, treatment, pkt.unparsed());
-                    packetService.emit(packet);
-                }
-            }
-        }
-    }
+  }
 }
+
