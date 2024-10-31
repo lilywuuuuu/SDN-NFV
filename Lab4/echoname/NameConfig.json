@@ -1,0 +1,9 @@
+{
+  "apps": {
+    "nycu.winlab.echoname": {
+      "whoami": {
+        "name": "Magikarp"
+      }
+    }
+  }
+}
