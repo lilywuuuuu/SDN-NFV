@@ -119,6 +119,10 @@ public class AppComponent {
     protected void activate() {
         appId = coreService.registerApplication("nycu.winlab.groupmeter");
 
+        // config listener
+        cfgService.addListener(cfgListener);
+        cfgService.registerConfigFactory(factory);
+
         // flow rule + group entry
         GroupKey groupKey = new DefaultGroupKey(appId.name().getBytes());
         createFailoverGroup(devID1, groupKey);
@@ -128,10 +132,6 @@ public class AppComponent {
         DeviceId deviceIds4 = DeviceId.deviceId("of:0000000000000004");
         MeterId meterId = installMeter(deviceIds4);
         installFlowRuleMeter(deviceIds4, meterId);
-
-        // config listener
-        cfgService.addListener(cfgListener);
-        cfgService.registerConfigFactory(factory);
 
         // packet processor
         packetService.addProcessor(processor, PacketProcessor.director(2));
@@ -248,6 +248,10 @@ public class AppComponent {
                     && event.configClass().equals(HostConfig.class)) {
                 HostConfig config = cfgService.getConfig(appId, HostConfig.class);
                 if (config != null) {
+                    log.info("ConnectPoint_h1: {}, ConnectPoint_h2: {}", config.host1(), config.host2());
+                    log.info("MacAddress_h1: {}, MacAddress _h2: {}", config.mac1(), config.mac2());
+                    log.info("IpAddress_h1: {}, IpAddress_h2: {}", config.ip1(), config.ip2());
+
                     String[] id_port1 = config.host1().toString().split("/");
                     String[] id_port2 = config.host2().toString().split("/");
                     devID1 = DeviceId.deviceId(id_port1[0]);
@@ -258,9 +262,6 @@ public class AppComponent {
                     mac2 = MacAddress.valueOf(config.mac2().toString());
                     ip1 = IpAddress.valueOf(config.ip1().toString());
                     ip2 = IpAddress.valueOf(config.ip2().toString());
-                    log.info("ConnectPoint_h1: {}, ConnectPoint_h2: {}", config.host1(), config.host2());
-                    log.info("MacAddress_h1: {}, MacAddress _h2: {}", config.mac1(), config.mac2());
-                    log.info("IpAddress_h1: {}, IpAddress_h2: {}", config.ip1(), config.ip2());
                 }
             }
         }
