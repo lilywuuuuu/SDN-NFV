@@ -36,6 +36,7 @@ import org.onosproject.net.DeviceId;
 import org.onosproject.net.FilteredConnectPoint;
 import org.onosproject.net.PortNumber;
 
+import org.onosproject.net.group.Group;
 import org.onosproject.net.group.DefaultGroupBucket;
 import org.onosproject.net.group.DefaultGroupDescription;
 import org.onosproject.net.group.GroupBucket;
@@ -163,7 +164,7 @@ public class AppComponent {
                     ip2 = IpAddress.valueOf(config.ip2().toString());
                 }
                 // group entry & flowrule for s1
-                GroupId groupId = createFailoverGroup(h1.deviceId(), null);
+                GroupId groupId = createFailoverGroup(h1.deviceId());
                 installFlowRuleGroup(h1.deviceId(), groupId);
 
                 // meter entry & flowrule for s4
@@ -173,23 +174,20 @@ public class AppComponent {
             }
         }
 
-        private GroupId createFailoverGroup(DeviceId devId, GroupKey groupKey) {
-            // generate a groupId for the group
-            GroupId groupId = GroupId.valueOf(1);
-
+        private GroupId createFailoverGroup(DeviceId devId) {
             // bucket 1: outPort = 2 and watchPort = 2
             TrafficTreatment treatment1 = DefaultTrafficTreatment.builder()
                     .setOutput(PortNumber.portNumber(2))
                     .build();
             GroupBucket bucket1 = DefaultGroupBucket.createFailoverGroupBucket(
-                    treatment1, PortNumber.portNumber(2), groupId);
+                    treatment1, PortNumber.portNumber(2), GroupId.valueOf(0));
 
             // bucket 2: outPort = 3 and watchPort = 3
             TrafficTreatment treatment2 = DefaultTrafficTreatment.builder()
                     .setOutput(PortNumber.portNumber(3))
                     .build();
             GroupBucket bucket2 = DefaultGroupBucket.createFailoverGroupBucket(
-                    treatment2, PortNumber.portNumber(3), groupId);
+                    treatment2, PortNumber.portNumber(3), GroupId.valueOf(0));
 
             GroupBuckets buckets = new GroupBuckets(Arrays.asList(bucket1, bucket2));
             GroupDescription groupDescription = new DefaultGroupDescription(
@@ -197,6 +195,8 @@ public class AppComponent {
 
             groupService.addGroup(groupDescription);
 
+            Group group = groupService.getGroups(devId).iterator().next();
+            GroupId groupId = group.id();
             return groupId;
         }
 
@@ -241,8 +241,7 @@ public class AppComponent {
                     .add();
 
             Meter meter = meterService.submit(meterRequest);
-            // MeterId meterId = meter.id();
-            MeterId meterId = (MeterId) meter.meterCellId();
+            MeterId meterId = meter.id();
             log.info("Meter installed on device {} with ID {}", devId, meterId);
             return meterId;
         }
