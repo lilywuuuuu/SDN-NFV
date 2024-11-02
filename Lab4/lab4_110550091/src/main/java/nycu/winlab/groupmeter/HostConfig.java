@@ -34,15 +34,15 @@ public class HostConfig extends Config<ApplicationId> {
     return hasOnlyFields(HOST1, HOST2, MAC1, MAC2, IP1, IP2);
   }
 
-  public ConnectPoint host1() {
+  public String host1() {
     return get(HOST1, null);
   }
 
-  public ConnectPoint host2() {
+  public String host2() {
     return get(HOST2, null);
   }
 
-  public MacAddress mac1() {
+  public String mac1() {
     return get(MAC1, null);
   }
 
