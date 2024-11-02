@@ -15,7 +15,9 @@
  */
 package nycu.winlab.groupmeter;
 
+import org.onlab.packet.MacAddress;
 import org.onosproject.core.ApplicationId;
+import org.onosproject.net.ConnectPoint;
 import org.onosproject.net.config.Config;
 
 public class HostConfig extends Config<ApplicationId> {
@@ -32,15 +34,15 @@ public class HostConfig extends Config<ApplicationId> {
     return hasOnlyFields(HOST1, HOST2, MAC1, MAC2, IP1, IP2);
   }
 
-  public String host1() {
+  public ConnectPoint host1() {
     return get(HOST1, null);
   }
 
-  public String host2() {
+  public ConnectPoint host2() {
     return get(HOST2, null);
   }
 
-  public String mac1() {
+  public MacAddress mac1() {
     return get(MAC1, null);
   }
 
