@@ -283,7 +283,7 @@ public class AppComponent {
                 ARP arpPkt = (ARP) ethPkt.getPayload();
                 if (arpPkt.getOpCode() == ARP.OP_REQUEST) {
                     Ip4Address dstIp = Ip4Address.valueOf(arpPkt.getTargetProtocolAddress());
-                    MacAddress dstMac = MacAddress.valueOf(arpPkt.getTargetHardwareAddress());
+                    MacAddress dstMac = dstIp.equals(ip1) ? mac1 : mac2;
                     Ethernet arpReply = ARP.buildArpReply(dstIp, dstMac, ethPkt);
                     packetOut(ByteBuffer.wrap(arpReply.serialize()), recDevId, recPort);
                 }
