@@ -168,14 +168,17 @@ public class AppComponent {
                     log.info("IpAddress_h1: {}, IpAddress_h2: {}", ip1, ip2);
                 }
                 // group entry & flowrule for s1
-                handleGroup(h1.deviceId());
+                GroupId groupId = installGroup(h1.deviceId());
+                flowGroup(h1.deviceId(), groupId);
 
                 // meter entry & flowrule for s4
-                handleMeter(DeviceId.deviceId("of:0000000000000004"));
+                DeviceId devId4 = DeviceId.deviceId("of:0000000000000004");
+                MeterId meterId = installMeter(devId4);
+                flowMeter(devId4, meterId);
             }
         }
 
-        private void handleGroup(DeviceId devId) {
+        private GroupId installGroup(DeviceId devId) {
             // bucket 1: outPort = 2 and watchPort = 2
             TrafficTreatment treatment1 = DefaultTrafficTreatment.builder()
                     .setOutput(PortNumber.portNumber(2))
@@ -196,15 +199,17 @@ public class AppComponent {
 
             groupService.addGroup(groupDescription);
             Group group = groupService.getGroups(devId).iterator().next();
+            return group.id();
+        }
 
-            // add flowrule
+        private void flowGroup(DeviceId devId, GroupId groupId) {
             TrafficSelector selector = DefaultTrafficSelector.builder()
                     .matchInPort(PortNumber.portNumber(1))
                     .matchEthType(Ethernet.TYPE_IPV4)
                     .build();
 
             TrafficTreatment treatment = DefaultTrafficTreatment.builder()
-                    .group(group.id())
+                    .group(groupId)
                     .build();
 
             FlowRule flowRule = DefaultFlowRule.builder()
@@ -217,10 +222,10 @@ public class AppComponent {
                     .build();
 
             flowRuleService.applyFlowRules(flowRule);
-            log.info("Flow rule installed on device {} with groupID {}", devId, group.id());
+            log.info("Flow rule installed on device {} with groupID {}", devId, groupId);
         }
 
-        private void handleMeter(DeviceId devId) {
+        private MeterId installMeter(DeviceId devId) {
             // create a drop band
             Band dropBand = DefaultBand.builder()
                     .ofType(Band.Type.DROP)
@@ -238,15 +243,17 @@ public class AppComponent {
                     .add();
 
             Meter meter = meterService.submit(meterRequest);
+            return (MeterId) meter.meterCellId();
+        }
 
-            // add flowrule
+        private void flowMeter(DeviceId devId, MeterId meterId) {
             TrafficSelector selector = DefaultTrafficSelector.builder()
                     .matchEthSrc(mac1)
                     .build();
 
             TrafficTreatment treatment = DefaultTrafficTreatment.builder()
                     .setOutput(PortNumber.portNumber(2))
-                    .meter(meter.id())
+                    .meter(meterId)
                     .build();
 
             FlowRule flowRule = DefaultFlowRule.builder()
@@ -259,7 +266,7 @@ public class AppComponent {
                     .build();
 
             flowRuleService.applyFlowRules(flowRule);
-            log.info("Flow rule installed on device {} with meterID {}", devId, meter.id());
+            log.info("Flow rule installed on device {} with meterID {}", devId, meterId);
         }
     }
 
