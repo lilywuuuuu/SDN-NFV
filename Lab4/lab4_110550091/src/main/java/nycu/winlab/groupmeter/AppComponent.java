@@ -200,6 +200,7 @@ public class AppComponent {
 
             Group group = groupService.getGroups(devId).iterator().next();
             GroupId groupId = group.id();
+            log.info("Group created on device {} with groupID {}", devId, groupId);
             return groupId;
         }
 
@@ -223,7 +224,7 @@ public class AppComponent {
                     .build();
 
             flowRuleService.applyFlowRules(flowRule);
-            log.info("Flow rule installed on device {} and group {}", devId, groupId);
+            log.info("Flow rule installed on device {} with groupID {}", devId, groupId);
         }
 
         private MeterId installMeter(DeviceId devId) {
@@ -244,8 +245,8 @@ public class AppComponent {
                     .add();
 
             Meter meter = meterService.submit(meterRequest);
-            MeterId meterId = meter.id();
-            log.info("Meter installed on device {} with ID {}", devId, meterId);
+            MeterId meterId = (MeterId) meter.meterCellId();
+            log.info("Meter installed on device {} with meterID {}", devId, meterId);
             return meterId;
         }
 
@@ -269,7 +270,7 @@ public class AppComponent {
                     .build();
 
             flowRuleService.applyFlowRules(flowRule);
-            log.info("Flow rule installed on device {} with meter {}", devId, meterId);
+            log.info("Flow rule installed on device {} with meterID {}", devId, meterId);
         }
     }
 
