@@ -50,7 +50,7 @@ import org.onosproject.net.meter.Band;
 import org.onosproject.net.meter.DefaultBand;
 import org.onosproject.net.meter.DefaultMeterRequest;
 import org.onosproject.net.meter.Meter;
-import org.onosproject.net.meter.MeterId;
+// import org.onosproject.net.meter.MeterId;
 
 import org.onosproject.net.intent.IntentService;
 import org.onosproject.net.intent.PointToPointIntent;
@@ -65,8 +65,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.nio.ByteBuffer;
-import java.util.Arrays;
-import java.util.Collections;
+import java.util.ArrayList;
+// import java.util.Arrays;
+// import java.util.Collections;
+import java.util.List;
 import java.util.Collection;
 
 @Component(immediate = true)
@@ -167,107 +169,168 @@ public class AppComponent {
                     log.info("MacAddress_h1: {}, MacAddress _h2: {}", mac1, mac2);
                     log.info("IpAddress_h1: {}, IpAddress_h2: {}", ip1, ip2);
                 }
-                // group entry & flowrule for s1
-                GroupId groupId = installGroup(h1.deviceId());
-                flowGroup(h1.deviceId(), groupId);
+                // create s1's Buckets and Group
+                List<GroupBucket> buckets = new ArrayList<>();
+                TrafficTreatment treatment1 = DefaultTrafficTreatment.builder()
+                        .setOutput(PortNumber.portNumber(2)).build();
+                GroupBucket groupBucket1 = DefaultGroupBucket.createFailoverGroupBucket(
+                        treatment1, PortNumber.portNumber(2), GroupId.valueOf(0));
+                buckets.add(groupBucket1);
+                TrafficTreatment treatment2 = DefaultTrafficTreatment.builder()
+                        .setOutput(PortNumber.portNumber(3)).build();
+                GroupBucket groupBucket2 = DefaultGroupBucket.createFailoverGroupBucket(
+                        treatment2, PortNumber.portNumber(3), GroupId.valueOf(0));
+                buckets.add(groupBucket2);
 
-                // meter entry & flowrule for s4
-                DeviceId devId4 = DeviceId.deviceId("of:0000000000000004");
-                MeterId meterId = installMeter(devId4);
-                flowMeter(devId4, meterId);
+                GroupBuckets groupBuckets = new GroupBuckets(buckets);
+                GroupDescription groupDescription = new DefaultGroupDescription(
+                        h1.deviceId(), GroupDescription.Type.FAILOVER, groupBuckets);
+                groupService.addGroup(groupDescription);
+                Group group = groupService.getGroups(h1.deviceId()).iterator().next();
+                GroupId groupId = group.id();
+
+                // install flow rule on s1
+                TrafficSelector.Builder selectorBuilder = DefaultTrafficSelector.builder();
+                selectorBuilder.matchInPort(PortNumber.portNumber(1)).matchEthType(Ethernet.TYPE_IPV4);
+                TrafficTreatment treatment = DefaultTrafficTreatment.builder()
+                        .group(groupId).build();
+
+                FlowRule flowRule = DefaultFlowRule.builder()
+                        .withSelector(selectorBuilder.build())
+                        .withTreatment(treatment)
+                        .forDevice(h1.deviceId())
+                        .withPriority(50000)
+                        .makePermanent()
+                        .fromApp(appId)
+                        .build();
+                flowRuleService.applyFlowRules(flowRule);
+
+                // create meter entry for s4
+                Collection<Band> bands = new ArrayList<>();
+                Band band = DefaultBand.builder()
+                        .ofType(Band.Type.DROP)
+                        .burstSize(1024)
+                        .withRate(512)
+                        .build();
+                bands.add(band);
+
+                MeterRequest meterRequest = DefaultMeterRequest.builder()
+                        .forDevice(DeviceId.deviceId("of:0000000000000004"))
+                        .burst()
+                        .withUnit(Meter.Unit.KB_PER_SEC)
+                        .withBands(bands)
+                        .fromApp(appId)
+                        .add();
+                Meter meter = meterService.submit(meterRequest);
+
+                TrafficSelector.Builder meterSelectorBuilder = DefaultTrafficSelector.builder();
+                selectorBuilder.matchEthSrc(mac1);
+                TrafficTreatment meterTreatment = DefaultTrafficTreatment.builder()
+                        .setOutput(PortNumber.portNumber(2))
+                        .meter(meter.id())
+                        .build();
+                FlowRule flowRule2 = DefaultFlowRule.builder()
+                        .forDevice(DeviceId.deviceId("of:0000000000000004"))
+                        .withSelector(meterSelectorBuilder.build())
+                        .withTreatment(meterTreatment)
+                        .makePermanent()
+                        .withPriority(60000)
+                        .fromApp(appId)
+                        .build();
+                flowRuleService.applyFlowRules(flowRule2);
             }
         }
 
-        private GroupId installGroup(DeviceId devId) {
-            // bucket 1: outPort = 2 and watchPort = 2
-            TrafficTreatment treatment1 = DefaultTrafficTreatment.builder()
-                    .setOutput(PortNumber.portNumber(2))
-                    .build();
-            GroupBucket bucket1 = DefaultGroupBucket.createFailoverGroupBucket(
-                    treatment1, PortNumber.portNumber(2), GroupId.valueOf(0));
+        // private GroupId installGroup(DeviceId devId) {
+        // // bucket 1: outPort = 2 and watchPort = 2
+        // TrafficTreatment treatment1 = DefaultTrafficTreatment.builder()
+        // .setOutput(PortNumber.portNumber(2))
+        // .build();
+        // GroupBucket bucket1 = DefaultGroupBucket.createFailoverGroupBucket(
+        // treatment1, PortNumber.portNumber(2), GroupId.valueOf(0));
 
-            // bucket 2: outPort = 3 and watchPort = 3
-            TrafficTreatment treatment2 = DefaultTrafficTreatment.builder()
-                    .setOutput(PortNumber.portNumber(3))
-                    .build();
-            GroupBucket bucket2 = DefaultGroupBucket.createFailoverGroupBucket(
-                    treatment2, PortNumber.portNumber(3), GroupId.valueOf(0));
+        // // bucket 2: outPort = 3 and watchPort = 3
+        // TrafficTreatment treatment2 = DefaultTrafficTreatment.builder()
+        // .setOutput(PortNumber.portNumber(3))
+        // .build();
+        // GroupBucket bucket2 = DefaultGroupBucket.createFailoverGroupBucket(
+        // treatment2, PortNumber.portNumber(3), GroupId.valueOf(0));
 
-            GroupBuckets buckets = new GroupBuckets(Arrays.asList(bucket1, bucket2));
-            GroupDescription groupDescription = new DefaultGroupDescription(
-                    devId, GroupDescription.Type.FAILOVER, buckets);
+        // GroupBuckets buckets = new GroupBuckets(Arrays.asList(bucket1, bucket2));
+        // GroupDescription groupDescription = new DefaultGroupDescription(
+        // devId, GroupDescription.Type.FAILOVER, buckets);
 
-            groupService.addGroup(groupDescription);
-            Group group = groupService.getGroups(devId).iterator().next();
-            return group.id();
-        }
+        // groupService.addGroup(groupDescription);
+        // Group group = groupService.getGroups(devId).iterator().next();
+        // return group.id();
+        // }
 
-        private void flowGroup(DeviceId devId, GroupId groupId) {
-            TrafficSelector selector = DefaultTrafficSelector.builder()
-                    .matchInPort(PortNumber.portNumber(1))
-                    .matchEthType(Ethernet.TYPE_IPV4)
-                    .build();
+        // private void flowGroup(DeviceId devId, GroupId groupId) {
+        // TrafficSelector selector = DefaultTrafficSelector.builder()
+        // .matchInPort(PortNumber.portNumber(1))
+        // .matchEthType(Ethernet.TYPE_IPV4)
+        // .build();
 
-            TrafficTreatment treatment = DefaultTrafficTreatment.builder()
-                    .group(groupId)
-                    .build();
+        // TrafficTreatment treatment = DefaultTrafficTreatment.builder()
+        // .group(groupId)
+        // .build();
 
-            FlowRule flowRule = DefaultFlowRule.builder()
-                    .forDevice(devId)
-                    .withSelector(selector)
-                    .withTreatment(treatment)
-                    .withPriority(flowPriority)
-                    .makePermanent()
-                    .fromApp(appId)
-                    .build();
+        // FlowRule flowRule = DefaultFlowRule.builder()
+        // .forDevice(devId)
+        // .withSelector(selector)
+        // .withTreatment(treatment)
+        // .withPriority(flowPriority)
+        // .makePermanent()
+        // .fromApp(appId)
+        // .build();
 
-            flowRuleService.applyFlowRules(flowRule);
-            log.info("Flow rule installed on device {} with groupID {}", devId, groupId);
-        }
+        // flowRuleService.applyFlowRules(flowRule);
+        // log.info("Flow rule installed on device {} with groupID {}", devId, groupId);
+        // }
 
-        private MeterId installMeter(DeviceId devId) {
-            // create a drop band
-            Band dropBand = DefaultBand.builder()
-                    .ofType(Band.Type.DROP)
-                    .withRate(512) // Rate in KB per second
-                    .burstSize(1024) // Burst size
-                    .build();
-            Collection<Band> bands = Collections.singletonList(dropBand);
+        // private MeterId installMeter(DeviceId devId) {
+        // // create a drop band
+        // Band dropBand = DefaultBand.builder()
+        // .ofType(Band.Type.DROP)
+        // .withRate(512) // Rate in KB per second
+        // .burstSize(1024) // Burst size
+        // .build();
+        // Collection<Band> bands = Collections.singletonList(dropBand);
 
-            MeterRequest meterRequest = DefaultMeterRequest.builder()
-                    .forDevice(devId)
-                    .withUnit(Meter.Unit.KB_PER_SEC)
-                    .withBands(bands)
-                    .burst() // set burst to true
-                    .fromApp(appId)
-                    .add();
+        // MeterRequest meterRequest = DefaultMeterRequest.builder()
+        // .forDevice(devId)
+        // .withUnit(Meter.Unit.KB_PER_SEC)
+        // .withBands(bands)
+        // .burst() // set burst to true
+        // .fromApp(appId)
+        // .add();
 
-            Meter meter = meterService.submit(meterRequest);
-            return (MeterId) meter.meterCellId();
-        }
+        // Meter meter = meterService.submit(meterRequest);
+        // return (MeterId) meter.meterCellId();
+        // }
 
-        private void flowMeter(DeviceId devId, MeterId meterId) {
-            TrafficSelector selector = DefaultTrafficSelector.builder()
-                    .matchEthSrc(mac1)
-                    .build();
+        // private void flowMeter(DeviceId devId, MeterId meterId) {
+        // TrafficSelector selector = DefaultTrafficSelector.builder()
+        // .matchEthSrc(mac1)
+        // .build();
 
-            TrafficTreatment treatment = DefaultTrafficTreatment.builder()
-                    .setOutput(PortNumber.portNumber(2))
-                    .meter(meterId)
-                    .build();
+        // TrafficTreatment treatment = DefaultTrafficTreatment.builder()
+        // .setOutput(PortNumber.portNumber(2))
+        // .meter(meterId)
+        // .build();
 
-            FlowRule flowRule = DefaultFlowRule.builder()
-                    .forDevice(devId)
-                    .withSelector(selector)
-                    .withTreatment(treatment)
-                    .withPriority(flowPriority)
-                    .makePermanent()
-                    .fromApp(appId)
-                    .build();
+        // FlowRule flowRule = DefaultFlowRule.builder()
+        // .forDevice(devId)
+        // .withSelector(selector)
+        // .withTreatment(treatment)
+        // .withPriority(flowPriority)
+        // .makePermanent()
+        // .fromApp(appId)
+        // .build();
 
-            flowRuleService.applyFlowRules(flowRule);
-            log.info("Flow rule installed on device {} with meterID {}", devId, meterId);
-        }
+        // flowRuleService.applyFlowRules(flowRule);
+        // log.info("Flow rule installed on device {} with meterID {}", devId, meterId);
+        // }
     }
 
     private class GroupMeterIntentProcessor implements PacketProcessor {
@@ -284,84 +347,34 @@ public class AppComponent {
             if (ethPkt == null)
                 return;
 
-            if (ethPkt.getEtherType() == Ethernet.TYPE_ARP) {
-                log.info("arp");
-                ARP arpPayload = (ARP) ethPkt.getPayload();
-                Ip4Address dstIp4Address = Ip4Address.valueOf(arpPayload.getTargetProtocolAddress());
-                if (arpPayload.getOpCode() == ARP.OP_REQUEST) {
-                    MacAddress targetMac = mac1;
-                    if (dstIp4Address.toInt() == ip2.toInt()) {
-                        targetMac = mac2;
-                    }
-                    Ethernet arpPacket = ARP.buildArpReply(dstIp4Address, targetMac, ethPkt);
-                    packetOut(ByteBuffer.wrap(arpPacket.serialize()), recDevId, recPort);
+            if (ethPkt.getEtherType() == Ethernet.TYPE_ARP) { // deal with ARP packet
+                log.info("ARP packet");
+                ARP arpPkt = (ARP) ethPkt.getPayload();
+                if (arpPkt.getOpCode() == ARP.OP_REQUEST) {
+                    Ip4Address dstIp = Ip4Address.valueOf(arpPkt.getTargetProtocolAddress());
+                    MacAddress dstMac = dstIp.equals(ip1) ? mac1 : mac2;
+                    Ethernet arpReply = ARP.buildArpReply(dstIp, dstMac, ethPkt);
+                    packetOut(ByteBuffer.wrap(arpReply.serialize()), recDevId, recPort);
                 }
-            } else {
-                log.info("not arp");
-                // install intent
-                IPv4 ipv4Payload = (IPv4) ethPkt.getPayload();
-                int dstIp4Address = ipv4Payload.getDestinationAddress();
-                if (dstIp4Address == ip1.toInt()) {
-                    FilteredConnectPoint ingressConnectPoint = new FilteredConnectPoint(srcCP);
-                    FilteredConnectPoint exgressConnectPoint = new FilteredConnectPoint(h1);
-                    log.info("Intent `{}`, port `{}` => `{}`, port `{}` is submitted. ",
-                            srcCP.deviceId(), srcCP.port(), h1.deviceId(), h1.port());
-                    TrafficSelector.Builder selectorBuilder = DefaultTrafficSelector.builder();
-                    selectorBuilder.matchEthDst(mac1);
-                    PointToPointIntent pointToPointIntent = PointToPointIntent.builder()
-                            .filteredIngressPoint(ingressConnectPoint)
-                            .filteredEgressPoint(exgressConnectPoint)
-                            .selector(selectorBuilder.build())
-                            .priority(55000)
-                            .appId(appId)
-                            .build();
-                    intentService.submit(pointToPointIntent);
+            } else { // install intent service for IPv4 packet
+                log.info("IPv4 packet");
+                IPv4 ipv4Pkt = (IPv4) ethPkt.getPayload();
+                int dstIP = ipv4Pkt.getDestinationAddress();
+                FilteredConnectPoint ingress = new FilteredConnectPoint(srcCP);
+                FilteredConnectPoint egress1 = new FilteredConnectPoint(h1);
+                FilteredConnectPoint egress2 = new FilteredConnectPoint(h2);
+
+                // intent service for h2 to h1
+                if (dstIP == ip1.toInt()) {
+                    handleIntent(srcCP, h1, mac1, ingress, egress1);
                     packetOut(pkt.unparsed(), h1.deviceId(), h1.port());
-                } else if (dstIp4Address == ip2.toInt()) {
-                    FilteredConnectPoint ingressConnectPoint = new FilteredConnectPoint(srcCP);
-                    FilteredConnectPoint exgressConnectPoint = new FilteredConnectPoint(h2);
-                    TrafficSelector.Builder selectorBuilder = DefaultTrafficSelector.builder();
-                    selectorBuilder.matchEthDst(mac2);
-                    PointToPointIntent pointToPointIntent = PointToPointIntent.builder()
-                            .filteredIngressPoint(ingressConnectPoint)
-                            .filteredEgressPoint(exgressConnectPoint)
-                            .selector(selectorBuilder.build())
-                            .priority(55000)
-                            .appId(appId)
-                            .build();
-                    intentService.submit(pointToPointIntent);
+                }
+                // intent service for (s2 or s4) to h2
+                else if (dstIP == ip2.toInt()) {
+                    handleIntent(srcCP, h2, mac2, ingress, egress2);
                     packetOut(pkt.unparsed(), h2.deviceId(), h2.port());
                 }
             }
-
-            // if (ethPkt.getEtherType() == Ethernet.TYPE_ARP) { // deal with ARP packet
-            // log.info("ARP packet");
-            // ARP arpPkt = (ARP) ethPkt.getPayload();
-            // if (arpPkt.getOpCode() == ARP.OP_REQUEST) {
-            // Ip4Address dstIp = Ip4Address.valueOf(arpPkt.getTargetProtocolAddress());
-            // MacAddress dstMac = dstIp.equals(ip1) ? mac1 : mac2;
-            // Ethernet arpReply = ARP.buildArpReply(dstIp, dstMac, ethPkt);
-            // packetOut(ByteBuffer.wrap(arpReply.serialize()), recDevId, recPort);
-            // }
-            // } else { // install intent service for IPv4 packet
-            // log.info("IPv4 packet");
-            // IPv4 ipv4Pkt = (IPv4) ethPkt.getPayload();
-            // int dstIP = ipv4Pkt.getDestinationAddress();
-            // FilteredConnectPoint ingress = new FilteredConnectPoint(srcCP);
-            // FilteredConnectPoint egress1 = new FilteredConnectPoint(h1);
-            // FilteredConnectPoint egress2 = new FilteredConnectPoint(h2);
-
-            // // intent service for h2 to h1
-            // if (dstIP == ip1.toInt()) {
-            // handleIntent(srcCP, h1, mac1, ingress, egress1);
-            // packetOut(pkt.unparsed(), h1.deviceId(), h1.port());
-            // }
-            // // intent service for (s2 or s4) to h2
-            // else if (dstIP == ip2.toInt()) {
-            // handleIntent(srcCP, h2, mac2, ingress, egress2);
-            // packetOut(pkt.unparsed(), h2.deviceId(), h2.port());
-            // }
-            // }
         }
 
         private void packetOut(ByteBuffer pkt, DeviceId recDevId, PortNumber recPort) {
@@ -372,25 +385,24 @@ public class AppComponent {
             packetService.emit(packet);
         }
 
-        // private void handleIntent(ConnectPoint srcCP, ConnectPoint dstCP, MacAddress
-        // matchMac,
-        // FilteredConnectPoint ingress, FilteredConnectPoint egress) {
+        private void handleIntent(ConnectPoint srcCP, ConnectPoint dstCP, MacAddress matchMac,
+                FilteredConnectPoint ingress, FilteredConnectPoint egress) {
 
-        // TrafficSelector selector = DefaultTrafficSelector.builder()
-        // .matchEthDst(matchMac)
-        // .build();
+            TrafficSelector selector = DefaultTrafficSelector.builder()
+                    .matchEthDst(matchMac)
+                    .build();
 
-        // PointToPointIntent intent = PointToPointIntent.builder()
-        // .filteredIngressPoint(ingress)
-        // .filteredEgressPoint(egress)
-        // .selector(selector)
-        // .priority(flowPriority)
-        // .appId(appId)
-        // .build();
+            PointToPointIntent intent = PointToPointIntent.builder()
+                    .filteredIngressPoint(ingress)
+                    .filteredEgressPoint(egress)
+                    .selector(selector)
+                    .priority(flowPriority)
+                    .appId(appId)
+                    .build();
 
-        // intentService.submit(intent);
-        // log.info("Intent `{}`, port `{}` => `{}`, port `{}` is submitted.",
-        // srcCP.deviceId(), srcCP.port(), dstCP.deviceId(), dstCP.port());
-        // }
+            intentService.submit(intent);
+            log.info("Intent `{}`, port `{}` => `{}`, port `{}` is submitted.",
+                    srcCP.deviceId(), srcCP.port(), dstCP.deviceId(), dstCP.port());
+        }
     }
 }
