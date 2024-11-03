@@ -277,42 +277,91 @@ public class AppComponent {
                 return;
 
             InboundPacket pkt = context.inPacket();
+            ConnectPoint srcCP = pkt.receivedFrom();
+            DeviceId recDevId = srcCP.deviceId();
+            PortNumber recPort = srcCP.port();
             Ethernet ethPkt = pkt.parsed();
             if (ethPkt == null)
                 return;
 
-            ConnectPoint srcCP = pkt.receivedFrom();
-            DeviceId recDevId = srcCP.deviceId();
-            PortNumber recPort = srcCP.port();
-
-            if (ethPkt.getEtherType() == Ethernet.TYPE_ARP) { // deal with ARP packet
-                log.info("ARP packet");
-                ARP arpPkt = (ARP) ethPkt.getPayload();
-                if (arpPkt.getOpCode() == ARP.OP_REQUEST) {
-                    Ip4Address dstIp = Ip4Address.valueOf(arpPkt.getTargetProtocolAddress());
-                    MacAddress dstMac = dstIp.equals(ip1) ? mac1 : mac2;
-                    Ethernet arpReply = ARP.buildArpReply(dstIp, dstMac, ethPkt);
-                    packetOut(ByteBuffer.wrap(arpReply.serialize()), recDevId, recPort);
+            if (ethPkt.getEtherType() == Ethernet.TYPE_ARP) {
+                log.info("arp");
+                ARP arpPayload = (ARP) ethPkt.getPayload();
+                Ip4Address dstIp4Address = Ip4Address.valueOf(arpPayload.getTargetProtocolAddress());
+                if (arpPayload.getOpCode() == ARP.OP_REQUEST) {
+                    MacAddress targetMac = mac1;
+                    if (dstIp4Address.toInt() == ip2.toInt()) {
+                        targetMac = mac2;
+                    }
+                    Ethernet arpPacket = ARP.buildArpReply(dstIp4Address, targetMac, ethPkt);
+                    packetOut(ByteBuffer.wrap(arpPacket.serialize()), recDevId, recPort);
                 }
-            } else { // install intent service for IPv4 packet
-                log.info("IPv4 packet");
-                IPv4 ipv4Pkt = (IPv4) ethPkt.getPayload();
-                int dstIP = ipv4Pkt.getDestinationAddress();
-                FilteredConnectPoint ingress = new FilteredConnectPoint(srcCP);
-                FilteredConnectPoint egress1 = new FilteredConnectPoint(h1);
-                FilteredConnectPoint egress2 = new FilteredConnectPoint(h2);
-
-                // intent service for h2 to h1
-                if (dstIP == ip1.toInt()) {
-                    handleIntent(srcCP, h1, mac1, ingress, egress1);
+            } else {
+                log.info("not arp");
+                // install intent
+                IPv4 ipv4Payload = (IPv4) ethPkt.getPayload();
+                int dstIp4Address = ipv4Payload.getDestinationAddress();
+                if (dstIp4Address == ip1.toInt()) {
+                    FilteredConnectPoint ingressConnectPoint = new FilteredConnectPoint(srcCP);
+                    FilteredConnectPoint exgressConnectPoint = new FilteredConnectPoint(h1);
+                    log.info("Intent `{}`, port `{}` => `{}`, port `{}` is submitted. ",
+                            srcCP.deviceId(), srcCP.port(), h1.deviceId(), h1.port());
+                    TrafficSelector.Builder selectorBuilder = DefaultTrafficSelector.builder();
+                    selectorBuilder.matchEthDst(mac1);
+                    PointToPointIntent pointToPointIntent = PointToPointIntent.builder()
+                            .filteredIngressPoint(ingressConnectPoint)
+                            .filteredEgressPoint(exgressConnectPoint)
+                            .selector(selectorBuilder.build())
+                            .priority(55000)
+                            .appId(appId)
+                            .build();
+                    intentService.submit(pointToPointIntent);
                     packetOut(pkt.unparsed(), h1.deviceId(), h1.port());
-                }
-                // intent service for (s2 or s4) to h2
-                else if (dstIP == ip2.toInt()) {
-                    handleIntent(srcCP, h2, mac2, ingress, egress2);
+                } else if (dstIp4Address == ip2.toInt()) {
+                    FilteredConnectPoint ingressConnectPoint = new FilteredConnectPoint(srcCP);
+                    FilteredConnectPoint exgressConnectPoint = new FilteredConnectPoint(h2);
+                    TrafficSelector.Builder selectorBuilder = DefaultTrafficSelector.builder();
+                    selectorBuilder.matchEthDst(mac2);
+                    PointToPointIntent pointToPointIntent = PointToPointIntent.builder()
+                            .filteredIngressPoint(ingressConnectPoint)
+                            .filteredEgressPoint(exgressConnectPoint)
+                            .selector(selectorBuilder.build())
+                            .priority(55000)
+                            .appId(appId)
+                            .build();
+                    intentService.submit(pointToPointIntent);
                     packetOut(pkt.unparsed(), h2.deviceId(), h2.port());
                 }
             }
+
+            // if (ethPkt.getEtherType() == Ethernet.TYPE_ARP) { // deal with ARP packet
+            // log.info("ARP packet");
+            // ARP arpPkt = (ARP) ethPkt.getPayload();
+            // if (arpPkt.getOpCode() == ARP.OP_REQUEST) {
+            // Ip4Address dstIp = Ip4Address.valueOf(arpPkt.getTargetProtocolAddress());
+            // MacAddress dstMac = dstIp.equals(ip1) ? mac1 : mac2;
+            // Ethernet arpReply = ARP.buildArpReply(dstIp, dstMac, ethPkt);
+            // packetOut(ByteBuffer.wrap(arpReply.serialize()), recDevId, recPort);
+            // }
+            // } else { // install intent service for IPv4 packet
+            // log.info("IPv4 packet");
+            // IPv4 ipv4Pkt = (IPv4) ethPkt.getPayload();
+            // int dstIP = ipv4Pkt.getDestinationAddress();
+            // FilteredConnectPoint ingress = new FilteredConnectPoint(srcCP);
+            // FilteredConnectPoint egress1 = new FilteredConnectPoint(h1);
+            // FilteredConnectPoint egress2 = new FilteredConnectPoint(h2);
+
+            // // intent service for h2 to h1
+            // if (dstIP == ip1.toInt()) {
+            // handleIntent(srcCP, h1, mac1, ingress, egress1);
+            // packetOut(pkt.unparsed(), h1.deviceId(), h1.port());
+            // }
+            // // intent service for (s2 or s4) to h2
+            // else if (dstIP == ip2.toInt()) {
+            // handleIntent(srcCP, h2, mac2, ingress, egress2);
+            // packetOut(pkt.unparsed(), h2.deviceId(), h2.port());
+            // }
+            // }
         }
 
         private void packetOut(ByteBuffer pkt, DeviceId recDevId, PortNumber recPort) {
@@ -323,24 +372,25 @@ public class AppComponent {
             packetService.emit(packet);
         }
 
-        private void handleIntent(ConnectPoint srcCP, ConnectPoint dstCP, MacAddress matchMac,
-                FilteredConnectPoint ingress, FilteredConnectPoint egress) {
+        // private void handleIntent(ConnectPoint srcCP, ConnectPoint dstCP, MacAddress
+        // matchMac,
+        // FilteredConnectPoint ingress, FilteredConnectPoint egress) {
 
-            TrafficSelector selector = DefaultTrafficSelector.builder()
-                    .matchEthDst(matchMac)
-                    .build();
+        // TrafficSelector selector = DefaultTrafficSelector.builder()
+        // .matchEthDst(matchMac)
+        // .build();
 
-            PointToPointIntent intent = PointToPointIntent.builder()
-                    .filteredIngressPoint(ingress)
-                    .filteredEgressPoint(egress)
-                    .selector(selector)
-                    .priority(flowPriority)
-                    .appId(appId)
-                    .build();
+        // PointToPointIntent intent = PointToPointIntent.builder()
+        // .filteredIngressPoint(ingress)
+        // .filteredEgressPoint(egress)
+        // .selector(selector)
+        // .priority(flowPriority)
+        // .appId(appId)
+        // .build();
 
-            intentService.submit(intent);
-            log.info("Intent `{}`, port `{}` => `{}`, port `{}` is submitted.",
-                    srcCP.deviceId(), srcCP.port(), dstCP.deviceId(), dstCP.port());
-        }
+        // intentService.submit(intent);
+        // log.info("Intent `{}`, port `{}` => `{}`, port `{}` is submitted.",
+        // srcCP.deviceId(), srcCP.port(), dstCP.deviceId(), dstCP.port());
+        // }
     }
 }
