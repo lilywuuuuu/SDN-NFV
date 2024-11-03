@@ -9,9 +9,11 @@ import org.onlab.packet.Ethernet;
 import org.onlab.packet.IPv4;
 import org.onlab.packet.Ip4Address;
 import org.onlab.packet.MacAddress;
+
 import org.onosproject.core.ApplicationId;
 import org.onosproject.core.CoreService;
 import org.onosproject.core.GroupId;
+
 import org.onosproject.net.flow.DefaultFlowRule;
 import org.onosproject.net.flow.DefaultTrafficSelector;
 import org.onosproject.net.flow.TrafficSelector;
@@ -19,6 +21,7 @@ import org.onosproject.net.flow.TrafficTreatment;
 import org.onosproject.net.flow.DefaultTrafficTreatment;
 import org.onosproject.net.flow.FlowRule;
 import org.onosproject.net.flow.FlowRuleService;
+
 import org.onosproject.net.packet.OutboundPacket;
 import org.onosproject.net.packet.DefaultOutboundPacket;
 import org.onosproject.net.packet.PacketService;
@@ -134,7 +137,7 @@ public class AppComponent {
         // remove flowrule installed by app
         flowRuleService.removeFlowRulesById(appId);
 
-        // remove listerner
+        // remove config listerner
         cfgService.removeListener(cfgListener);
         cfgService.unregisterConfigFactory(factory);
 
@@ -156,25 +159,29 @@ public class AppComponent {
             if ((event.type() == CONFIG_ADDED || event.type() == CONFIG_UPDATED)
                     && event.configClass().equals(HostConfig.class)) {
                 HostConfig config = cfgService.getConfig(appId, HostConfig.class);
-                h1 = ConnectPoint.deviceConnectPoint(config.host1());
-                h2 = ConnectPoint.deviceConnectPoint(config.host2());
-                mac1 = MacAddress.valueOf(config.mac1());
-                mac2 = MacAddress.valueOf(config.mac2());
-                ip1 = Ip4Address.valueOf(config.ip1());
-                ip2 = Ip4Address.valueOf(config.ip2());
                 if (config != null) {
+                    // get information from config
+                    h1 = ConnectPoint.deviceConnectPoint(config.host1());
+                    h2 = ConnectPoint.deviceConnectPoint(config.host2());
+                    mac1 = MacAddress.valueOf(config.mac1());
+                    mac2 = MacAddress.valueOf(config.mac2());
+                    ip1 = Ip4Address.valueOf(config.ip1());
+                    ip2 = Ip4Address.valueOf(config.ip2());
+
+                    // log information
                     log.info("ConnectPoint_h1: {}, ConnectPoint_h2: {}", h1, h2);
                     log.info("MacAddress_h1: {}, MacAddress _h2: {}", mac1, mac2);
                     log.info("IpAddress_h1: {}, IpAddress_h2: {}", ip1, ip2);
-                }
-                // group entry & flowrule for s1
-                GroupId groupId = installGroup(h1.deviceId());
-                flowGroup(h1.deviceId(), groupId);
 
-                // meter entry & flowrule for s4
-                DeviceId devId4 = DeviceId.deviceId("of:0000000000000004");
-                MeterId meterId = installMeter(devId4);
-                flowMeter(devId4, meterId);
+                    // group entry & flowrule for s1
+                    GroupId groupId = installGroup(h1.deviceId());
+                    flowGroup(h1.deviceId(), groupId);
+
+                    // meter entry & flowrule for s4
+                    DeviceId devId4 = DeviceId.deviceId("of:0000000000000004");
+                    MeterId meterId = installMeter(devId4);
+                    flowMeter(devId4, meterId);
+                }
             }
         }
 
