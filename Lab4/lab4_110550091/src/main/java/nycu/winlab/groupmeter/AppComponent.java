@@ -83,14 +83,14 @@ import org.slf4j.LoggerFactory;
 public class AppComponent {
 
     private final Logger log = LoggerFactory.getLogger(getClass());
-    private final NameConfigListener cfgListener = new NameConfigListener();
+    private final HostConfigListener cfgListener = new HostConfigListener();
     // private GroupMeterProcessor processor = new GroupMeterProcessor();
 
-    private final ConfigFactory<ApplicationId, NameConfig> factory = new ConfigFactory<ApplicationId, NameConfig>(
-            APP_SUBJECT_FACTORY, NameConfig.class, "informations") {
+    private final ConfigFactory<ApplicationId, HostConfig> factory = new ConfigFactory<ApplicationId, HostConfig>(
+            APP_SUBJECT_FACTORY, HostConfig.class, "informations") {
         @Override
-        public NameConfig createConfig() {
-            return new NameConfig();
+        public HostConfig createConfig() {
+            return new HostConfig();
         }
     };
 
@@ -157,12 +157,12 @@ public class AppComponent {
         log.info("Stopped");
     }
 
-    private class NameConfigListener implements NetworkConfigListener {
+    private class HostConfigListener implements NetworkConfigListener {
         @Override
         public void event(NetworkConfigEvent event) {
             if ((event.type() == CONFIG_ADDED || event.type() == CONFIG_UPDATED)
-                    && event.configClass().equals(NameConfig.class)) {
-                NameConfig config = cfgService.getConfig(appId, NameConfig.class);
+                    && event.configClass().equals(HostConfig.class)) {
+                HostConfig config = cfgService.getConfig(appId, HostConfig.class);
                 host1 = ConnectPoint.deviceConnectPoint(config.host1());
                 host2 = ConnectPoint.deviceConnectPoint(config.host2());
                 mac1 = MacAddress.valueOf(config.mac1());
