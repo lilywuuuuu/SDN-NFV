@@ -167,17 +167,17 @@ public class AppComponent {
                     log.info("IpAddress_h1: {}, IpAddress_h2: {}", ip1, ip2);
                 }
                 // group entry & flowrule for s1
-                GroupId groupId = createFailoverGroup(h1.deviceId());
-                installFlowRuleGroup(h1.deviceId(), groupId);
+                createFailoverGroup(h1.deviceId());
+                installFlowRuleGroup(h1.deviceId());
 
                 // meter entry & flowrule for s4
                 DeviceId devId4 = DeviceId.deviceId("of:0000000000000004");
-                MeterId meterId = installMeter(devId4);
-                installFlowRuleMeter(devId4, meterId);
+                Meter meter = installMeter(devId4);
+                installFlowRuleMeter(devId4, meter);
             }
         }
 
-        private GroupId createFailoverGroup(DeviceId devId) {
+        private void createFailoverGroup(DeviceId devId) {
             // bucket 1: outPort = 2 and watchPort = 2
             TrafficTreatment treatment1 = DefaultTrafficTreatment.builder()
                     .setOutput(PortNumber.portNumber(2))
@@ -197,21 +197,19 @@ public class AppComponent {
                     devId, GroupDescription.Type.FAILOVER, buckets);
 
             groupService.addGroup(groupDescription);
-
-            Group group = groupService.getGroups(devId).iterator().next();
-            GroupId groupId = group.id();
-            log.info("Group created on device {} with groupID {}", devId, groupId);
-            return groupId;
+            log.info("Group created on device {}", devId);
         }
 
-        private void installFlowRuleGroup(DeviceId devId, GroupId groupId) {
+        private void installFlowRuleGroup(DeviceId devId) {
+            Group group = groupService.getGroups(devId).iterator().next();
+
             TrafficSelector selector = DefaultTrafficSelector.builder()
                     .matchInPort(PortNumber.portNumber(1))
                     .matchEthType(Ethernet.TYPE_IPV4)
                     .build();
 
             TrafficTreatment treatment = DefaultTrafficTreatment.builder()
-                    .group(groupId)
+                    .group(group.id())
                     .build();
 
             FlowRule flowRule = DefaultFlowRule.builder()
@@ -224,10 +222,10 @@ public class AppComponent {
                     .build();
 
             flowRuleService.applyFlowRules(flowRule);
-            log.info("Flow rule installed on device {} with groupID {}", devId, groupId);
+            log.info("Flow rule installed on device {} with groupID {}", devId, group.id());
         }
 
-        private MeterId installMeter(DeviceId devId) {
+        private Meter installMeter(DeviceId devId) {
             // create a drop band
             Band dropBand = DefaultBand.builder()
                     .ofType(Band.Type.DROP)
@@ -244,20 +242,19 @@ public class AppComponent {
                     .fromApp(appId)
                     .add();
 
+            log.info("Meter installed on device {}", devId);
             Meter meter = meterService.submit(meterRequest);
-            MeterId meterId = (MeterId) meter.meterCellId();
-            log.info("Meter installed on device {} with meterID {}", devId, meterId);
-            return meterId;
+            return meter;
         }
 
-        private void installFlowRuleMeter(DeviceId devId, MeterId meterId) {
+        private void installFlowRuleMeter(DeviceId devId, Meter meter) {
             TrafficSelector selector = DefaultTrafficSelector.builder()
                     .matchEthSrc(mac1)
                     .build();
 
             TrafficTreatment treatment = DefaultTrafficTreatment.builder()
                     .setOutput(PortNumber.portNumber(2))
-                    .meter(meterId)
+                    .meter(meter.id())
                     .build();
 
             FlowRule flowRule = DefaultFlowRule.builder()
@@ -270,7 +267,7 @@ public class AppComponent {
                     .build();
 
             flowRuleService.applyFlowRules(flowRule);
-            log.info("Flow rule installed on device {} with meterID {}", devId, meterId);
+            log.info("Flow rule installed on device {} with meterID {}", devId, meter.id());
         }
     }
 
