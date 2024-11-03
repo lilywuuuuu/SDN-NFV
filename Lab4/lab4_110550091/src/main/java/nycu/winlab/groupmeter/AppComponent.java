@@ -7,7 +7,7 @@ import static org.onosproject.net.config.basics.SubjectFactories.APP_SUBJECT_FAC
 import org.onlab.packet.ARP;
 import org.onlab.packet.Ethernet;
 import org.onlab.packet.IPv4;
-import org.onlab.packet.IpAddress;
+import org.onlab.packet.Ip4Address;
 import org.onlab.packet.MacAddress;
 import org.onosproject.core.ApplicationId;
 import org.onosproject.core.CoreService;
@@ -42,7 +42,6 @@ import org.onosproject.net.group.DefaultGroupDescription;
 import org.onosproject.net.group.GroupBucket;
 import org.onosproject.net.group.GroupBuckets;
 import org.onosproject.net.group.GroupDescription;
-import org.onosproject.net.group.GroupKey;
 import org.onosproject.net.group.GroupService;
 
 import org.onosproject.net.meter.MeterRequest;
@@ -109,7 +108,7 @@ public class AppComponent {
     private ApplicationId appId;
     private ConnectPoint h1, h2;
     private MacAddress mac1, mac2;
-    private IpAddress ip1, ip2;
+    private Ip4Address ip1, ip2;
 
     @Activate
     protected void activate() {
@@ -132,12 +131,16 @@ public class AppComponent {
 
     @Deactivate
     protected void deactivate() {
+        // remove flowrule installed by app
+        flowRuleService.removeFlowRulesById(appId);
+
+        // remove listerner and processor
         cfgService.removeListener(cfgListener);
         cfgService.unregisterConfigFactory(factory);
         packetService.removeProcessor(processor);
         processor = null;
 
-        // remove flowrule you installed for packet-in
+        // remove flowrule installed for packet-in
         TrafficSelector.Builder selector = DefaultTrafficSelector.builder();
         selector.matchEthType(Ethernet.TYPE_IPV4);
         packetService.cancelPackets(selector.build(), PacketPriority.REACTIVE, appId);
@@ -152,16 +155,16 @@ public class AppComponent {
                     && event.configClass().equals(HostConfig.class)) {
                 HostConfig config = cfgService.getConfig(appId, HostConfig.class);
                 if (config != null) {
-                    log.info("ConnectPoint_h1: {}, ConnectPoint_h2: {}", config.host1(), config.host2());
-                    log.info("MacAddress_h1: {}, MacAddress _h2: {}", config.mac1(), config.mac2());
-                    log.info("IpAddress_h1: {}, IpAddress_h2: {}", config.ip1(), config.ip2());
+                    h1 = ConnectPoint.deviceConnectPoint(config.host1());
+                    h2 = ConnectPoint.deviceConnectPoint(config.host2());
+                    mac1 = MacAddress.valueOf(config.mac1());
+                    mac2 = MacAddress.valueOf(config.mac2());
+                    ip1 = Ip4Address.valueOf(config.ip1());
+                    ip2 = Ip4Address.valueOf(config.ip2());
 
-                    h1 = ConnectPoint.deviceConnectPoint(config.host1().toString());
-                    h2 = ConnectPoint.deviceConnectPoint(config.host2().toString());
-                    mac1 = MacAddress.valueOf(config.mac1().toString());
-                    mac2 = MacAddress.valueOf(config.mac2().toString());
-                    ip1 = IpAddress.valueOf(config.ip1().toString());
-                    ip2 = IpAddress.valueOf(config.ip2().toString());
+                    log.info("ConnectPoint_h1: {}, ConnectPoint_h2: {}", h1, h2);
+                    log.info("MacAddress_h1: {}, MacAddress _h2: {}", mac1, mac2);
+                    log.info("IpAddress_h1: {}, IpAddress_h2: {}", ip1, ip2);
                 }
                 // group entry & flowrule for s1
                 GroupId groupId = createFailoverGroup(h1.deviceId());
@@ -275,8 +278,6 @@ public class AppComponent {
         public void process(PacketContext context) {
             if (context.isHandled())
                 return;
-            if (context.inPacket().parsed().getEtherType() != Ethernet.TYPE_IPV4)
-                return;
 
             InboundPacket pkt = context.inPacket();
             ConnectPoint srcCP = pkt.receivedFrom();
@@ -286,14 +287,16 @@ public class AppComponent {
             if (ethPkt == null)
                 return;
 
-            if (ethPkt.getPayload() instanceof ARP) { // deal with ARP packet
+            if (ethPkt.getEtherType() == Ethernet.TYPE_ARP) { // deal with ARP packet
                 log.info("ARP packet");
                 ARP arpPkt = (ARP) ethPkt.getPayload();
                 if (arpPkt.getOpCode() != ARP.OP_REQUEST) {
-                    Ethernet ethReply = ARP.buildArpReply(ip2.getIp4Address(), mac2, ethPkt);
-                    packetOut(ByteBuffer.wrap(ethReply.serialize()), recDevId, recPort);
+                    Ip4Address dstIp = Ip4Address.valueOf(arpPkt.getTargetProtocolAddress());
+                    MacAddress dstMac = MacAddress.valueOf(arpPkt.getTargetHardwareAddress());
+                    Ethernet arpReply = ARP.buildArpReply(dstIp, dstMac, ethPkt);
+                    packetOut(ByteBuffer.wrap(arpReply.serialize()), recDevId, recPort);
                 }
-            } else {
+            } else { // install intent service for IPv4 packet
                 log.info("IPv4 packet");
                 IPv4 ipv4Pkt = (IPv4) ethPkt.getPayload();
                 int dstIP = ipv4Pkt.getDestinationAddress();
@@ -302,12 +305,12 @@ public class AppComponent {
                 FilteredConnectPoint egress2 = new FilteredConnectPoint(h2);
 
                 // intent service for h2 to h1
-                if (dstIP == ip1.getIp4Address().toInt()) {
+                if (dstIP == ip1.toInt()) {
                     handleIntent(srcCP, h1, mac1, ingress, egress1);
                     packetOut(pkt.unparsed(), h1.deviceId(), h1.port());
                 }
                 // intent service for (s2 or s4) to h2
-                else if (dstIP == ip2.getIp4Address().toInt()) {
+                else if (dstIP == ip2.toInt()) {
                     handleIntent(srcCP, h2, mac2, ingress, egress2);
                     packetOut(pkt.unparsed(), h2.deviceId(), h2.port());
                 }
