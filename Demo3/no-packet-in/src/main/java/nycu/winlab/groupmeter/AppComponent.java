@@ -125,9 +125,10 @@ public class AppComponent {
         packetService.addProcessor(processor, PacketProcessor.director(2));
 
         // install a flowrule for packet-in
-        TrafficSelector.Builder selector = DefaultTrafficSelector.builder();
-        selector.matchEthType(Ethernet.TYPE_IPV4);
-        packetService.requestPackets(selector.build(), PacketPriority.REACTIVE, appId);
+        // TrafficSelector.Builder selector = DefaultTrafficSelector.builder();
+        // selector.matchEthType(Ethernet.TYPE_IPV4);
+        // packetService.requestPackets(selector.build(), PacketPriority.REACTIVE,
+        // appId);
 
         log.info("Started");
     }
@@ -177,6 +178,8 @@ public class AppComponent {
                     log.info("IpAddress_h1: {}, IpAddress_h2: {}, IpAddress_h3: {}", ip1, ip2, ip3);
 
                     // intent service between h1 and h3, h2 and h3
+                    createIntent(h1, h2, mac2);
+                    createIntent(h2, h1, mac1);
                     createIntent(h3, h1, mac1);
                     createIntent(h1, h3, mac3);
                     createIntent(h3, h2, mac2);
