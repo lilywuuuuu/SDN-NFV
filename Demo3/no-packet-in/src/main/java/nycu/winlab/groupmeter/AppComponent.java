@@ -176,6 +176,12 @@ public class AppComponent {
                     log.info("MacAddress_h1: {}, MacAddress_h2: {}, MacAddress_h3: {}", mac1, mac2, mac3);
                     log.info("IpAddress_h1: {}, IpAddress_h2: {}, IpAddress_h3: {}", ip1, ip2, ip3);
 
+                    // intent service between h1 and h3, h2 and h3
+                    createIntent(h3, h1, mac1);
+                    createIntent(h1, h3, mac3);
+                    createIntent(h3, h2, mac2);
+                    createIntent(h2, h3, mac3);
+
                     // group entry & flowrule for s1
                     GroupId groupId = installGroup(h1.deviceId());
                     flowGroup(h1.deviceId(), groupId);
@@ -184,12 +190,6 @@ public class AppComponent {
                     DeviceId devId4 = DeviceId.deviceId("of:0000000000000004");
                     MeterId meterId = installMeter(devId4);
                     flowMeter(devId4, meterId);
-
-                    // intent service between h1 and h3, h2 and h3
-                    createIntent(h3, h1, mac1);
-                    createIntent(h1, h3, mac3);
-                    createIntent(h3, h2, mac2);
-                    createIntent(h2, h3, mac3);
                 }
             }
         }
