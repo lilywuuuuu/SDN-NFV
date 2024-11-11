@@ -196,7 +196,7 @@ public class AppComponent {
 
         private void createIntent(ConnectPoint srcCP, ConnectPoint dstCP, MacAddress matchMac) {
             FilteredConnectPoint ingress = new FilteredConnectPoint(srcCP);
-            FilteredConnectPoint egress = new FilteredConnectPoint(h1);
+            FilteredConnectPoint egress = new FilteredConnectPoint(dstCP);
 
             TrafficSelector selector = DefaultTrafficSelector.builder()
                     .matchEthDst(matchMac)
