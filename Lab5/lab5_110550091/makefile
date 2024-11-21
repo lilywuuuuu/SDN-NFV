@@ -5,7 +5,7 @@ build:
 	docker build -t $(IMAGE_NAME) -f host.Dockerfile .
 
 # Set up the environment
-main:
+main: build
 	docker compose up -d
 	sudo ovs-vsctl add-br ovsbr
 	sudo ovs-vsctl set bridge ovsbr protocols=OpenFlow14
