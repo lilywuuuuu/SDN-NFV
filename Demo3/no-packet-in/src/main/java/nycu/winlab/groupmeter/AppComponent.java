@@ -185,14 +185,14 @@ public class AppComponent {
                     createIntent(h3, h2, mac2);
                     createIntent(h2, h3, mac3);
 
-                    // group entry & flowrule for s1
-                    GroupId groupId = installGroup(h1.deviceId());
-                    flowGroup(h1.deviceId(), groupId);
+                    // // group entry & flowrule for s1
+                    // GroupId groupId = installGroup(h1.deviceId());
+                    // flowGroup(h1.deviceId(), groupId);
 
-                    // meter entry & flowrule for s4
-                    DeviceId devId4 = DeviceId.deviceId("of:0000000000000004");
-                    MeterId meterId = installMeter(devId4);
-                    flowMeter(devId4, meterId);
+                    // // meter entry & flowrule for s4
+                    // DeviceId devId4 = DeviceId.deviceId("of:0000000000000004");
+                    // MeterId meterId = installMeter(devId4);
+                    // flowMeter(devId4, meterId);
                 }
             }
         }
