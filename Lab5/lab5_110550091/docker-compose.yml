@@ -205,36 +205,42 @@ networks:
         - subnet: 172.10.0.0/16
 
   R1h1br:
+    name: R1h1br
     driver: bridge
     ipam:
       config:
         - subnet: 172.18.0.0/16
 
   R1R2br:
+    name: R1R2br
     driver: bridge
     ipam:
       config:
         - subnet: 172.19.0.0/16
 
   R2h2br:
+    name: R2h2br
     driver: bridge
     ipam:
       config:
         - subnet: 172.21.0.0/16
 
   R3h3br:
+    name: R3h3br
     driver: bridge
     ipam:
       config:
         - subnet: 172.22.0.0/16
 
   R4R5br:
+    name: R4R5br
     driver: bridge
     ipam:
       config:
         - subnet: 172.23.0.0/16
 
   R5h4br:
+    name: R5h4br
     driver: bridge
     ipam:
       config:
