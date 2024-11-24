@@ -199,7 +199,7 @@ services:
 
 networks:
   default:
-    name: default
+    name: default_network
     driver: bridge
     ipam:
       config:
