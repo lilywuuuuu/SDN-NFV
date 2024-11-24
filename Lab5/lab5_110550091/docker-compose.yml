@@ -107,10 +107,10 @@ services:
       - NET_ADMIN
       - NET_BROADCAST
     networks:
-      R1R2br:
-        ipv4_address: 172.19.0.2
       R1h1br:
         ipv4_address: 172.18.0.2
+      R1R2br:
+        ipv4_address: 172.19.0.2
     extra_hosts:
       - "host.docker.internal:host-gateway"
     volumes:
@@ -136,7 +136,7 @@ services:
       - "host.docker.internal:host-gateway"
     volumes:
       - ./config/daemons:/etc/frr/daemons
-      - ./config/R1/frr.conf:/etc/frr/frr.conf
+      - ./config/R2/frr.conf:/etc/frr/frr.conf
 
   R3:
     image: frrouting/frr-debian
@@ -155,7 +155,7 @@ services:
       - "host.docker.internal:host-gateway"
     volumes:
       - ./config/daemons:/etc/frr/daemons
-      - ./config/R1/frr.conf:/etc/frr/frr.conf
+      - ./config/R3/frr.conf:/etc/frr/frr.conf
 
   R4:
     image: frrouting/frr-debian
@@ -174,7 +174,7 @@ services:
       - "host.docker.internal:host-gateway"
     volumes:
       - ./config/daemons:/etc/frr/daemons
-      - ./config/R1/frr.conf:/etc/frr/frr.conf
+      - ./config/R4/frr.conf:/etc/frr/frr.conf
 
   R5:
     image: frrouting/frr-debian
@@ -195,14 +195,14 @@ services:
       - "host.docker.internal:host-gateway"
     volumes:
       - ./config/daemons:/etc/frr/daemons
-      - ./config/R1/frr.conf:/etc/frr/frr.conf
+      - ./config/R5/frr.conf:/etc/frr/frr.conf
 
 networks:
   default:
     driver: bridge
     ipam:
       config:
-        - subnet: 172.10.0.0/16
+        - subnet: 172.20.0.0/16
 
   R1h1br:
     name: R1h1br
