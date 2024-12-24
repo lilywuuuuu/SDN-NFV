@@ -65,9 +65,16 @@ deploy:
 	sudo ip netns exec R1 ip link set vethr1ta up
 	sudo ip netns exec R1 ip a a 192.168.70.8/24 dev vethr1ta
 
-	# AS1
-	@$(call create_as_veth, R2, h2, 172.17.8.1/24, 172.17.8.2/24)
-	docker exec -it h2 ip r add default via 172.17.8.1
+	# link R2 to h2
+	sudo ip link add vethr2h2 type veth peer name vethh2r2
+	sudo ip link set vethr2h2 netns R2
+	sudo ip link set vethh2r2 netns h2
+	sudo ip netns exec R2 ip link set vethr2h2 up
+	sudo ip netns exec h2 ip link set vethh2r2 up
+	sudo ip netns exec R2 ip addr add 172.17.$(ID0).1/24 dev vethr2h2
+	sudo ip netns exec h2 ip addr add 172.17.$(ID0).2/24 dev vethh2r2
+	sudo ip netns exec R2 ip -6 addr add 2a0b:4e07:c4:1$(ID)::1/64 dev vethr2h2
+	sudo ip netns exec h2 ip -6 addr add 2a0b:4e07:c4:1$(ID)::2/64 dev vethh2r2
 
 clean:
 	sudo ovs-vsctl del-controller ovs1
@@ -78,6 +85,7 @@ clean:
 	sudo ip l del veth0
 	sudo ip l del veths1s2
 	sudo ip l del vethtar1
+	sudo ip link del vethr2h2
 	@basename -a /sys/class/net/veth* | grep -e '\([Rh][0-9]\)\{2\}' | xargs -I {} ip l del {} 2>/dev/null | true
 
 
