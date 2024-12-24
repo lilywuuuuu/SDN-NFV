@@ -50,12 +50,12 @@ deploy:
 	sudo ovs-docker add-port ovs1 tas R1 --ipaddress=172.16.8.69/24
 	docker exec -it h1 ip route add default via 172.16.8.69
 
-	# veth 192.168.100.1 for onos and ovs2 
-	sudo ip link add veth0 type veth peer name veth1
-	sudo ovs-vsctl add-port ovs2 veth0
-	sudo ip link set veth0 up
-	sudo ip link set veth1 up
-	sudo ip a add 192.168.100.1/24 dev veth1
+	# link onos and ovs2
+	sudo ip link add vethos2 type veth peer name veths2o
+	sudo ovs-vsctl add-port ovs2 veths2o
+	sudo ip link set vethos2 up
+	sudo ip link set veths2o up
+	sudo ip addr add 192.168.100.1/24 dev vethos2
 
 	# link ovs1 and ovs2
 	sudo ip link add veths1s2 type veth peer name veths2s1
@@ -74,7 +74,8 @@ deploy:
 
 	# link R2 to h2
 	@$(call create_as_veth, R2, h2, 172.17.$(ID).1/24, 172.17.$(ID).2/24, 2a0b:4e07:c4:1$(ID0)::1/64, 2a0b:4e07:c4:1$(ID0)::2/64)
-	
+	docker exec -it h2 ip route add default via 172.17.$(ID).1
+	docker exec -it h2 ip -6 route add default via 2a0b:4e07:c4:1$(ID0)::1
 
 clean:
 	sudo ovs-vsctl del-controller ovs1
@@ -85,7 +86,6 @@ clean:
 	sudo ip l del veth0
 	sudo ip l del veths1s2
 	sudo ip l del vethtar1
-	sudo ip link del vethr2h2
 	@basename -a /sys/class/net/veth* | grep -e '\([Rh][0-9]\)\{2\}' | xargs -I {} ip l del {} 2>/dev/null | true
 
 
