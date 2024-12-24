@@ -14,8 +14,8 @@ main:
 	sudo ovs-vsctl add-br ovsbr2
 	sudo ovs-vsctl set bridge ovsbr2 protocols=OpenFlow14
 	sudo ovs-vsctl set-controller ovsbr2 tcp:127.0.0.1:6653
-	sudo ovs-docker add-port ovsbr2 eth2 R2 --ipaddress=172.19.0.2/16
-	sudo ovs-docker add-port ovsbr2 eth3 h2 --ipaddress=172.19.0.3/16
+	sudo ovs-docker add-port ovsbr2 eth4 R2 --ipaddress=172.19.0.2/16
+	sudo ovs-docker add-port ovsbr2 eth5 h2 --ipaddress=172.19.0.3/16
 
 	docker exec h1 ip route add default via 172.18.0.2
 	docker exec h2 ip route add default via 172.19.0.2
