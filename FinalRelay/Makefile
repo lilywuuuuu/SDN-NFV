@@ -33,9 +33,9 @@ deploy:
 	$(call netns)
 
 	for cname in $(CONTAINER); do \
-	docker exec -it $$cname sysctl -w net.ipv6.conf.all.disable_ipv6=0; \
-	docker exec -it $$cname sysctl -w net.ipv6.conf.default.disable_ipv6=0; \
-	docker exec -it $$cname sysctl -w net.ipv6.conf.lo.disable_ipv6=0; \
+		docker exec -it $$cname sysctl -w net.ipv6.conf.all.disable_ipv6=0; \
+		docker exec -it $$cname sysctl -w net.ipv6.conf.default.disable_ipv6=0; \
+		docker exec -it $$cname sysctl -w net.ipv6.conf.lo.disable_ipv6=0; \
 	done
 
 	sudo ovs-vsctl add-br ovs1
@@ -52,14 +52,14 @@ deploy:
 	docker exec -it R2 ip -6 addr add fd63::2/64 dev tr1
 	sudo ovs-vsctl add-port ovs2 TO_TA_VXLAN -- set interface TO_TA_VXLAN type=vxlan options:remote_ip=192.168.60.9 options:local_ip=192.168.61.9
 
-	sudo ovs-docker add-port ovs2 tas h1 --ipaddress=172.16.9.2/24
-	docker exec -it h1 ip -6 addr add 2a0b:4e07:c4:9::2/64 dev tas
-	sudo ovs-docker add-port ovs1 tas R1 --ipaddress=172.16.9.69/24
-	docker exec -it R1 ip -6 addr add 2a0b:4e07:c4:9::69/64 dev tas
+	sudo ovs-docker add-port ovs2 tas h1 --ipaddress=172.16.8.2/24
+	docker exec -it h1 ip -6 addr add 2a0b:4e07:c4:8::2/64 dev tas
+	sudo ovs-docker add-port ovs1 tas R1 --ipaddress=172.16.8.69/24
+	docker exec -it R1 ip -6 addr add 2a0b:4e07:c4:8::69/64 dev tas
 
 	# configure routes
-	docker exec -it h1 ip route add default via 172.16.9.69
-	docker exec -it h1 ip -6 route add default via 2a0b:4e07:c4:9::69
+	docker exec -it h1 ip route add default via 172.16.8.69
+	docker exec -it h1 ip -6 route add default via 2a0b:4e07:c4:8::69
 
 	# veth 192.168.100.1 for onos and ovs2 
 	sudo ip link add veth0 type veth peer name veth1
@@ -81,13 +81,13 @@ deploy:
 	sudo ovs-vsctl add-port ovs1 vethtar1
 	sudo ip link set vethr1ta netns R1
 	sudo ip netns exec R1 ip link set vethr1ta up
-	sudo ip netns exec R1 ip a a 192.168.70.9/24 dev vethr1ta
-	sudo ip netns exec R1 ip -6 a a fd70::9/64 dev vethr1ta
+	sudo ip netns exec R1 ip a a 192.168.70.8/24 dev vethr1ta
+	sudo ip netns exec R1 ip -6 a a fd70::8/64 dev vethr1ta
 
 	# AS1
-	@$(call create_as_veth, R2, h2, 172.17.9.1/24, 172.17.9.2/24, 2a0b:4e07:c4:109::1/64, 2a0b:4e07:c4:109::2/64)
-	docker exec -it h2 ip r add default via 172.17.9.1
-	docker exec -it h2 ip -6 r add default via 2a0b:4e07:c4:109::1
+	@$(call create_as_veth, R2, h2, 172.17.8.1/24, 172.17.8.2/24, 2a0b:4e07:c4:108::1/64, 2a0b:4e07:c4:108::2/64)
+	docker exec -it h2 ip r add default via 172.17.8.1
+	docker exec -it h2 ip -6 r add default via 2a0b:4e07:c4:108::1
 
 test:
 
