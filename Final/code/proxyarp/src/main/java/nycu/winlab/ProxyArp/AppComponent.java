@@ -15,8 +15,6 @@
  */
 package nycu.winlab.ProxyArp;
 
-import org.onosproject.routeservice.*;
-
 import org.onosproject.cfg.ComponentConfigService;
 import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
@@ -31,8 +29,6 @@ import java.util.Map;
 
 import org.onosproject.core.ApplicationId;
 import org.onosproject.core.CoreService;
-
-import org.onosproject.net.intf.InterfaceService;
 
 import org.onosproject.net.flow.DefaultTrafficSelector;
 import org.onosproject.net.flow.TrafficSelector;
@@ -70,12 +66,6 @@ public class AppComponent {
     private final Logger log = LoggerFactory.getLogger(getClass());
 
     /** Some configurable property. */
-
-    @Reference(cardinality = ReferenceCardinality.MANDATORY)
-    protected RouteService routeService;
-
-    @Reference(cardinality = ReferenceCardinality.MANDATORY)
-    protected InterfaceService interfaceService;
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY)
     protected ComponentConfigService cfgService;

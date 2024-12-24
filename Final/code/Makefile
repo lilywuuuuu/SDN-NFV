@@ -76,13 +76,7 @@ deploy:
 	sudo ip link set veths2s1 up
 
 	# link to IXP
-	sudo ip link add vethr1ta type veth peer name vethtar1
-	sudo ip link set vethtar1 up
-	sudo ovs-vsctl add-port ovs1 vethtar1
-	sudo ip link set vethr1ta netns R1
-	sudo ip netns exec R1 ip link set vethr1ta up
-	sudo ip netns exec R1 ip a a 192.168.70.8/24 dev vethr1ta
-	sudo ip netns exec R1 ip -6 a a fd70::8/64 dev vethr1ta
+	sudo ovs-docker add-port ovs1 tixp R1 --ipaddress=192.168.70.8/24
 
 	# AS1
 	@$(call create_as_veth, R2, h2, 172.17.8.1/24, 172.17.8.2/24, 2a0b:4e07:c4:108::1/64, 2a0b:4e07:c4:108::2/64)
