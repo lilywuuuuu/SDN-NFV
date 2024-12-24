@@ -37,7 +37,7 @@ deploy:
 	sudo ovs-docker add-port ovs1 tonos R1 --ipaddress=192.168.100.3/24
 	sudo ovs-docker add-port ovs1 tr2 R1 --ipaddress=192.168.63.1/24
 	sudo ovs-docker add-port ovs1 tr1 R2 --ipaddress=192.168.63.2/24
-	sudo ovs-vsctl add-port ovs2 TO_TA_VXLAN -- set interface TO_TA_VXLAN type=vxlan options:remote_ip=192.168.60.9 options:local_ip=192.168.61.9
+	sudo ovs-vsctl add-port ovs2 TO_TA_VXLAN -- set interface TO_TA_VXLAN type=vxlan options:remote_ip=192.168.60.8 options:local_ip=192.168.61.8
 
 	sudo ovs-docker add-port ovs2 tas h1 --ipaddress=172.16.8.2/24
 	sudo ovs-docker add-port ovs1 tas R1 --ipaddress=172.16.8.69/24
