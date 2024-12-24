@@ -38,7 +38,9 @@ deploy:
 	sudo ovs-vsctl add-port ovs2 TO_TA_VXLAN -- set interface TO_TA_VXLAN type=vxlan options:local_ip=192.168.61.$(ID) options:remote_ip=192.168.60.$(ID)
 	
 	# link h1 to R1
+	docker exec -it h1 ip route del default
 	docker exec -it h1 ip route add default via 172.16.$(ID).69
+	docker exec -it h1 ip -6 route del default
 	docker exec -it h1 ip -6 route add default via 2a0b:4e07:c4:$(ID)::69
 
 	# link onos and ovs2
@@ -65,7 +67,9 @@ deploy:
 	sudo ip netns exec h2 ip addr add 172.17.$(ID).2/24 dev vethh2r2
 	sudo ip netns exec R2 ip -6 addr add 2a0b:4e07:c4:1$(ID)::1/64 dev vethr2h2
 	sudo ip netns exec h2 ip -6 addr add 2a0b:4e07:c4:1$(ID)::2/64 dev vethh2r2
+	docker exec -it h2 ip route del default
 	docker exec -it h2 ip route add default via 172.17.$(ID).1
+	docker exec -it h2 ip -6 route del default
 	docker exec -it h2 ip -6 route add default via 2a0b:4e07:c4:1$(ID)::1
 
 
