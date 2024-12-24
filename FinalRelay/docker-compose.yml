@@ -1,0 +1,89 @@
+services:
+  onos:
+    image: onosproject/onos:latest
+    container_name: onos
+    hostname: onos
+    privileged: true
+    environment:
+      - ONOS_APPS=fwd,drivers,fpm,gui2,hostprovider,lldpprovider,openflow,openflow-base,optical-model,route-service
+    ports:
+      - "2620:2620"
+      - "6653:6653"
+      - "8101:8101"
+      - "8181:8181"
+    tty: true
+    stdin_open: true
+  
+  h1:
+    image: host
+    container_name: h1
+    privileged: true
+    build:
+      context: ./config
+      dockerfile: host.Dockerfile
+    cap_add:
+      - NET_ADMIN
+      - NET_BROADCAST
+    network_mode: "none"
+    entrypoint: ["/bin/sh","-c"]
+    command:
+    - |
+      ip -6 route del default
+      ip -6 route add default via 2a0b:4e07:c4:7::69
+      sleep infinity
+
+  h2:
+    image: host
+    container_name: h2
+    privileged: true
+    build:
+      context: ./config
+      dockerfile: host.Dockerfile
+    cap_add:
+      - NET_ADMIN
+      - NET_BROADCAST
+    network_mode: "none"
+    entrypoint: ["/bin/sh","-c"]
+    command:
+    - |
+      ip -6 route del default
+      ip -6 route add default via 2a0b:4e07:c4:107::1
+      sleep infinity
+
+  R1:
+    image: frr
+    container_name: R1
+    hostname: R1
+    build:
+      context: ./config
+      dockerfile: frr.Dockerfile
+    privileged: true
+    sysctls:
+      - net.ipv4.ip_forward=1
+    cap_add:
+      - NET_ADMIN
+      - NET_BROADCAST
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ./config/daemons:/etc/frr/daemons
+      - ./config/R1/frr.conf:/etc/frr/frr.conf
+  
+  R2:
+    image: frr
+    container_name: R2
+    hostname: R2
+    build:
+      context: ./config
+      dockerfile: frr.Dockerfile
+    privileged: true
+    sysctls:
+      - net.ipv4.ip_forward=1
+    cap_add:
+      - NET_ADMIN
+      - NET_BROADCAST
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ./config/daemons:/etc/frr/daemons
+      - ./config/R2/frr.conf:/etc/frr/frr.conf
