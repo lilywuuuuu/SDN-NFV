@@ -165,35 +165,18 @@ deploy:
 	sudo ip netns exec R1 ip link set vethr1ta up
 	sudo ip netns exec R1 ip a a 192.168.70.$(ID)/24 dev vethr1ta
 
-	# link R2 to h2
-	sudo ip link add vethr2h2 type veth peer name vethh2r2
-	sudo ip link set vethr2h2 netns R2
-	sudo ip link set vethh2r2 netns h2
-	sudo ip netns exec R2 ip link set vethr2h2 up
-	sudo ip netns exec h2 ip link set vethh2r2 up
-	sudo ip netns exec R2 ip addr add 172.17.$(ID).1/24 dev vethr2h2
-	sudo ip netns exec h2 ip addr add 172.17.$(ID).2/24 dev vethh2r2
-	docker exec -it h2 ip route del default 2>/dev/null || true
-	docker exec -it h2 ip route add default via 172.17.$(ID).1
+	# AS1
+	@$(call create_as_veth, R2, h2, 172.17.7.1/24, 172.17.7.2/24)
+	docker exec -it h2 ip r add default via 172.17.7.1
 
 
 clean:
-	sudo ovs-vsctl del-controller ovs1 || true
-	sudo ovs-vsctl del-controller ovs2 || true
-	sudo ovs-vsctl del-br ovs1 || true
-	sudo ovs-vsctl del-br ovs2 || true
-
+	sudo ovs-vsctl del-controller ovs1
+	sudo ovs-vsctl del-controller ovs2
+	sudo ovs-vsctl del-br ovs1
+	sudo ovs-vsctl del-br ovs2
 	docker compose down
-
-	sudo ip l del vethos2 || true
-	sudo ip l del veths2o || true
-	sudo ip l del veths1s2 || true
-	sudo ip l del veths2s1 || true
-	sudo ip l del vethr2h2 || true
-	sudo ip l del vethh2r2 || true
-
-	for cname in $(CONTAINER); do \
-		sudo ip netns delete $$cname || true; \
-	done
-
-	docker network prune -f
+	sudo ip l del veth0
+	sudo ip l del veths1s2
+	sudo ip l del vethtar1
+	@basename -a /sys/class/net/veth* | grep -e '\([Rh][0-9]\)\{2\}' | xargs -I {} ip l del {} 2>/dev/null | true

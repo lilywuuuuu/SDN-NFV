@@ -28,6 +28,8 @@ services:
     entrypoint: ["/bin/sh","-c"]
     command:
     - |
+      ip route del default
+      ip -6 route del default
       sleep infinity
 
   h2:
@@ -44,6 +46,8 @@ services:
     entrypoint: ["/bin/sh","-c"]
     command:
     - |
+      ip route del default
+      ip -6 route del default
       sleep infinity
 
   R1:
