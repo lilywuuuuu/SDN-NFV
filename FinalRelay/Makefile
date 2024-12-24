@@ -13,6 +13,8 @@ define create_as_veth
 	$(eval $@_C2 = $(2))
 	$(eval $@_IP1= $(3))
 	$(eval $@_IP2= $(4))
+	$(eval $@_IP1v6= $(5))
+	$(eval $@_IP2v6= $(6))
 	$(eval $@_L1=veth${$@_C1}${$@_C2})
 	$(eval $@_L2=veth${$@_C2}${$@_C1})
 	sudo ip link add ${$@_L1} type veth peer name ${$@_L2}
@@ -20,9 +22,14 @@ define create_as_veth
 	sudo ip link set ${$@_L2} netns ${$@_C2}
 	sudo ip netns exec ${$@_C1} ip link set ${$@_L1} up
 	sudo ip netns exec ${$@_C2} ip link set ${$@_L2} up
-	sudo ip netns exec ${$@_C1} ip a a ${$@_IP1} dev ${$@_L1}
-	sudo ip netns exec ${$@_C2} ip a a ${$@_IP2} dev ${$@_L2}
+	sudo ip netns exec ${$@_C1} ip addr add ${$@_IP1} dev ${$@_L1}
+	sudo ip netns exec ${$@_C2} ip addr add ${$@_IP2} dev ${$@_L2}
+	sudo ip netns exec ${$@_C1} ip -6 addr add ${$@_IP1v6} dev ${$@_L1}
+	sudo ip netns exec ${$@_C2} ip -6 addr add ${$@_IP2v6} dev ${$@_L2}
 endef
+
+ID = 8
+ID0 = 0$(ID)
 
 deploy:
 	docker compose up -d
@@ -66,15 +73,8 @@ deploy:
 	sudo ip netns exec R1 ip a a 192.168.70.8/24 dev vethr1ta
 
 	# link R2 to h2
-	sudo ip link add vethr2h2 type veth peer name vethh2r2
-	sudo ip link set vethr2h2 netns R2
-	sudo ip link set vethh2r2 netns h2
-	sudo ip netns exec R2 ip link set vethr2h2 up
-	sudo ip netns exec h2 ip link set vethh2r2 up
-	sudo ip netns exec R2 ip addr add 172.17.$(ID0).1/24 dev vethr2h2
-	sudo ip netns exec h2 ip addr add 172.17.$(ID0).2/24 dev vethh2r2
-	sudo ip netns exec R2 ip -6 addr add 2a0b:4e07:c4:1$(ID)::1/64 dev vethr2h2
-	sudo ip netns exec h2 ip -6 addr add 2a0b:4e07:c4:1$(ID)::2/64 dev vethh2r2
+	@$(call create_as_veth, R2, h2, 172.17.$(ID).1/24, 172.17.$(ID).2/24, 2a0b:4e07:c4:1$(ID0)::1/64, 2a0b:4e07:c4:1$(ID0)::2/64)
+	
 
 clean:
 	sudo ovs-vsctl del-controller ovs1
