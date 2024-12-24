@@ -28,6 +28,10 @@ services:
     entrypoint: ["/bin/sh","-c"]
     command:
     - |
+      ip route del default 
+      ip route add default via 172.16.8.69
+      ip -6 route del default
+      ip -6 route add default via 2a0b:4e07:c4:8::69
       sleep infinity
 
   h2:
@@ -44,6 +48,10 @@ services:
     entrypoint: ["/bin/sh","-c"]
     command:
     - |
+      ip route del default 
+      ip route add default via 172.17.8.1
+      ip -6 route del default
+      ip -6 route add default via 2a0b:4e07:c4:108::1
       sleep infinity
 
   R1:
@@ -59,6 +67,7 @@ services:
     cap_add:
       - NET_ADMIN
       - NET_BROADCAST
+    network_mode: "none"
     extra_hosts:
       - "host.docker.internal:host-gateway"
     volumes:
@@ -78,6 +87,7 @@ services:
     cap_add:
       - NET_ADMIN
       - NET_BROADCAST
+    network_mode: "none"
     extra_hosts:
       - "host.docker.internal:host-gateway"
     volumes:
