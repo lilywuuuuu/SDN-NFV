@@ -83,7 +83,7 @@ clean:
 	sudo ovs-vsctl del-br ovs1
 	sudo ovs-vsctl del-br ovs2
 	docker compose down
-	sudo ip l del veth0
+	sudo ip l del vethos2
 	sudo ip l del veths1s2
 	sudo ip l del vethtar1
 	@basename -a /sys/class/net/veth* | grep -e '\([Rh][0-9]\)\{2\}' | xargs -I {} ip l del {} 2>/dev/null | true
