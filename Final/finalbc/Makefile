@@ -24,6 +24,13 @@ define create_as_veth
 	sudo ip netns exec ${$@_C2} ip a a ${$@_IP2} dev ${$@_L2}
 endef
 
+define remove_autoconf
+	$(eval $@_container = $(1))
+	$(eval $@_intf = $(2))
+	sudo ip netns exec ${$@_container} sysctl -w net.ipv6.conf.${$@_intf}.autoconf=0
+	sudo ip netns exec ${$@_container} ip -6 addr flush dev ${$@_intf}
+endef
+
 deploy:
 	docker compose up -d
 	$(call netns)
@@ -36,14 +43,18 @@ deploy:
 
 	sudo ovs-docker add-port ovs1 tonos R1 --ipaddress=192.168.100.3/24
 	sudo ovs-docker add-port ovs1 tr2 R1 --ipaddress=192.168.63.1/24
+	$(call remove_autoconf, R1, tr2)
 	docker exec -it R1 ip -6 addr add fd63::1/64 dev tr2
 	sudo ovs-docker add-port ovs1 tr1 R2 --ipaddress=192.168.63.2/24
+	$(call remove_autoconf, R2, tr1)
 	docker exec -it R2 ip -6 addr add fd63::2/64 dev tr1
 	sudo ovs-vsctl add-port ovs2 TO_TA_VXLAN -- set interface TO_TA_VXLAN type=vxlan options:remote_ip=192.168.60.7
 
 	sudo ovs-docker add-port ovs2 tas h1 --ipaddress=172.16.7.2/24
+	$(call remove_autoconf, h1, tas)
 	docker exec -it h1 ip -6 addr add 2a0b:4e07:c4:7::2/64 dev tas
 	sudo ovs-docker add-port ovs1 tas R1 --ipaddress=172.16.7.69/24
+	$(call remove_autoconf, R1, tas)
 	docker exec -it R1 ip -6 addr add 2a0b:4e07:c4:7::69/64 dev tas
 	docker exec -it h1 ip route add default via 172.16.7.1
 	docker exec -it h1 ip -6 route add default via 2a0b:4e07:c4:7::1
@@ -63,6 +74,7 @@ deploy:
 
 	# link to IXP
 	sudo ovs-docker add-port ovs1 tixp R1 --ipaddress=192.168.70.7/24
+	$(call remove_autoconf, R1, tixp)
 	docker exec -it R1 ip -6 addr add fd70::7/64 dev tixp
 
 	# AS1
@@ -81,7 +93,7 @@ install:
 	onos-netcfg localhost interface_config.json
 	onos-app localhost install! src/vrouter/target/vrouter-app-1.0-SNAPSHOT.oar
 	onos-app localhost install! src/ProxyArp/target/ProxyArp-1.0-SNAPSHOT.oar
-	onos-app localhost install! src/bridge-app/target/bridge-app-1.0-SNAPSHOT.oar
+	onos-app localhost install! src/bridge-app/target/bridge-app-1.0-SNAPSHOT.oar	
 	
 compile:
 	mvn clean install -DskipTests

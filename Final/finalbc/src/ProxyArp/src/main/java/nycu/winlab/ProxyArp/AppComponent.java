@@ -235,6 +235,9 @@ public class AppComponent {
                             // send proxy neighbor advertisement packet
                             MacAddress targetMac = ipv6ProxyArpTable.get(TargetIp6Address);
                             Ethernet icmp6Packet = NeighborAdvertisement.buildNdpAdv(TargetIp6Address, targetMac, ethPkt);
+                            IPv6 ipv6Reply = (IPv6) icmp6Packet.getPayload();
+                            ipv6Reply.setHopLimit((byte) 255);
+                            icmp6Packet.setPayload(ipv6Reply);
                             packetOut(recDevId, recPort, ByteBuffer.wrap(icmp6Packet.serialize()));
                             log.info("TABLE6 HIT. Requested MAC = {}", targetMac);
                         }
