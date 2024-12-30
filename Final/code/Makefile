@@ -64,13 +64,13 @@ deploy:
 
 	# link to IXP
 	sudo ovs-docker add-port ovs1 tixp R1 --ipaddress=192.168.70.8/24
-	docker exec -it R1 ip -6 addr add fd70::7/64 dev tixp
+	docker exec -it R1 ip -6 addr add fd70::8/64 dev tixp
 
 	# AS1
 	@$(call create_as_veth, R2, h2, 172.17.8.1/24, 172.17.8.2/24)
 	docker exec -it h2 ip -6 addr add 2a0b:4e07:c4:108::2/64 dev vethh2R2
 	docker exec -it R2 ip -6 addr add 2a0b:4e07:c4:108::1/64 dev vethR2h2
-	docker exec -it h2 ip r add default via 172.17.8.1
+	docker exec -it h2 ip route add default via 172.17.8.1
 	docker exec -it h2 ip -6 route add default via 2a0b:4e07:c4:108::1
 	
 install: 
@@ -82,11 +82,11 @@ install:
 compile:
 	mvn clean install -DskipTests
 clean:
-	sudo ovs-vsctl del-controller ovs1
-	sudo ovs-vsctl del-controller ovs2
-	sudo ovs-vsctl del-br ovs1
-	sudo ovs-vsctl del-br ovs2
-	sudo ip l del veth0
-	sudo ip l del veths1s2
-	docker compose down
+	sudo ovs-vsctl del-controller ovs1 | true
+	sudo ovs-vsctl del-controller ovs2 | true
+	sudo ovs-vsctl del-br ovs1 | true
+	sudo ovs-vsctl del-br ovs2 | true
+	sudo ip l del veth0 | true
+	sudo ip l del veths1s2 | true
+	docker compose down | true
 	@basename -a /sys/class/net/veth* | grep -e '\([Rh][0-9]\)\{2\}' | xargs -I {} ip l del {} 2>/dev/null | true

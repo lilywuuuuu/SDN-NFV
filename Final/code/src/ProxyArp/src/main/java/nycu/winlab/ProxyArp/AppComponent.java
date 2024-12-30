@@ -116,8 +116,8 @@ public class AppComponent {
         ipv6Selector.matchEthType(Ethernet.TYPE_IPV6);
         packetService.requestPackets(ipv6Selector.build(), PacketPriority.REACTIVE, appId);
        
-        ipv4ProxyArpTable.put(Ip4Address.valueOf( IPv4.toIPv4AddressBytes("172.16.7.1")), MacAddress.valueOf("00:00:00:00:00:02"));
-        ipv6ProxyArpTable.put(Ip6Address.valueOf("2a0b:4e07:c4:7::1"), MacAddress.valueOf("00:00:00:00:00:02"));
+        ipv4ProxyArpTable.put(Ip4Address.valueOf( IPv4.toIPv4AddressBytes("172.16.8.1")), MacAddress.valueOf("00:00:00:00:00:02"));
+        ipv6ProxyArpTable.put(Ip6Address.valueOf("2a0b:4e07:c4:8::1"), MacAddress.valueOf("00:00:00:00:00:02"));
 
         log.info("Started");
     }
