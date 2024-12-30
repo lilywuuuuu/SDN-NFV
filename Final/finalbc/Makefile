@@ -48,16 +48,16 @@ deploy:
 	sudo ovs-docker add-port ovs1 tr1 R2 --ipaddress=192.168.63.2/24
 	$(call remove_autoconf, R2, tr1)
 	docker exec -it R2 ip -6 addr add fd63::2/64 dev tr1
-	sudo ovs-vsctl add-port ovs2 TO_TA_VXLAN -- set interface TO_TA_VXLAN type=vxlan options:remote_ip=192.168.60.7
+	sudo ovs-vsctl add-port ovs2 TO_TA_VXLAN -- set interface TO_TA_VXLAN type=vxlan options:remote_ip=192.168.60.8
 
-	sudo ovs-docker add-port ovs2 tas h1 --ipaddress=172.16.7.2/24
+	sudo ovs-docker add-port ovs2 tas h1 --ipaddress=172.16.8.2/24
 	$(call remove_autoconf, h1, tas)
-	docker exec -it h1 ip -6 addr add 2a0b:4e07:c4:7::2/64 dev tas
-	sudo ovs-docker add-port ovs1 tas R1 --ipaddress=172.16.7.69/24
+	docker exec -it h1 ip -6 addr add 2a0b:4e07:c4:8::2/64 dev tas
+	sudo ovs-docker add-port ovs1 tas R1 --ipaddress=172.16.8.69/24
 	$(call remove_autoconf, R1, tas)
-	docker exec -it R1 ip -6 addr add 2a0b:4e07:c4:7::69/64 dev tas
-	docker exec -it h1 ip route add default via 172.16.7.1
-	docker exec -it h1 ip -6 route add default via 2a0b:4e07:c4:7::1
+	docker exec -it R1 ip -6 addr add 2a0b:4e07:c4:8::69/64 dev tas
+	docker exec -it h1 ip route add default via 172.16.8.1
+	docker exec -it h1 ip -6 route add default via 2a0b:4e07:c4:8::1
 
 	# veth 192.168.100.1 for onos and ovs2 
 	sudo ip link add veth0 type veth peer name veth1
@@ -73,16 +73,16 @@ deploy:
 	sudo ip link set veths2s1 up
 
 	# link to IXP
-	sudo ovs-docker add-port ovs1 tixp R1 --ipaddress=192.168.70.7/24
+	sudo ovs-docker add-port ovs1 tixp R1 --ipaddress=192.168.70.8/24
 	$(call remove_autoconf, R1, tixp)
-	docker exec -it R1 ip -6 addr add fd70::7/64 dev tixp
+	docker exec -it R1 ip -6 addr add fd70::8/64 dev tixp
 
 	# AS1
-	@$(call create_as_veth, R2, h2, 172.17.7.1/24, 172.17.7.2/24)
-	docker exec -it h2 ip -6 addr add 2a0b:4e07:c4:107::2/64 dev vethh2R2
-	docker exec -it R2 ip -6 addr add 2a0b:4e07:c4:107::1/64 dev vethR2h2
-	docker exec -it h2 ip r add default via 172.17.7.1
-	docker exec -it h2 ip -6 route add default via 2a0b:4e07:c4:107::1
+	@$(call create_as_veth, R2, h2, 172.17.8.1/24, 172.17.8.2/24)
+	docker exec -it h2 ip -6 addr add 2a0b:4e07:c4:108::2/64 dev vethh2R2
+	docker exec -it R2 ip -6 addr add 2a0b:4e07:c4:108::1/64 dev vethR2h2
+	docker exec -it h2 ip r add default via 172.17.8.1
+	docker exec -it h2 ip -6 route add default via 2a0b:4e07:c4:108::1
 
 	# sleep 15
 	# onos-app localhost install! target/bridge-app-1.0-SNAPSHOT.oar

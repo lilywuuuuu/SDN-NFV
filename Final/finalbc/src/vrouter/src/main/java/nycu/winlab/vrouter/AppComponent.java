@@ -129,10 +129,10 @@ public class AppComponent implements SomeInterface {
         packetService.addProcessor(processor, PacketProcessor.director(2));
         routeService.addListener(vRouterListener);
         ipv4FrrIP =  new ArrayList<>();
-        ipv4FrrIP.add("192.168.70.7");
+        ipv4FrrIP.add("192.168.70.8");
         ipv4FrrIP.add("192.168.63.1");
         ipv6FrrIP =  new ArrayList<>();
-        ipv6FrrIP.add("fd70::7");
+        ipv6FrrIP.add("fd70::8");
         ipv6FrrIP.add("fd63::1");
         
         ipv4PeerIP = new ArrayList<>();
@@ -206,13 +206,13 @@ public class AppComponent implements SomeInterface {
                 log.info("Get from InterfaceService = {}", interfaceService.getInterfaces());
                 log.info("Target IPAddress = {}", dstIp4Address);
 
-                if (containInPrefix(IpPrefix.valueOf("172.16.7.0/24"), srcIP4Address)
-                    && containInPrefix(IpPrefix.valueOf("172.16.7.0/24"), dstIp4Address)) {
+                if (containInPrefix(IpPrefix.valueOf("172.16.8.0/24"), srcIP4Address)
+                    && containInPrefix(IpPrefix.valueOf("172.16.8.0/24"), dstIp4Address)) {
                     log.info("Intra Traffic = {}, = {}", srcIP4Address, dstIp4Address);
                     return;
                 }
 
-                if (containInPrefix(IpPrefix.valueOf("172.16.7.0/24"), dstIp4Address)
+                if (containInPrefix(IpPrefix.valueOf("172.16.8.0/24"), dstIp4Address)
                     || containOutPrefix(dstIp4Address)) {
                     log.info("Contain in routers");
                     context.block();
@@ -229,15 +229,15 @@ public class AppComponent implements SomeInterface {
                     return;
                 }
                 log.info("Traffic = {}, = {}", srcIP6Address, dstIp6Address);
-                if (containInPrefix(IpPrefix.valueOf("2a0b:4e07:c4:7::/64"), srcIP6Address)
-                    && containInPrefix(IpPrefix.valueOf("2a0b:4e07:c4:7::/64"), dstIp6Address)) {
+                if (containInPrefix(IpPrefix.valueOf("2a0b:4e07:c4:8::/64"), srcIP6Address)
+                    && containInPrefix(IpPrefix.valueOf("2a0b:4e07:c4:8::/64"), dstIp6Address)) {
                     log.info("Get from InterfaceService = {}", interfaceService.getInterfaces());
                     log.info("Target IPAddress = {}", dstIp6Address);
                     log.info("Intra Traffic = {}, = {}", srcIP6Address, dstIp6Address);
                     return;
                 }
 
-                if (containInPrefix(IpPrefix.valueOf("2a0b:4e07:c4:7::/64"), dstIp6Address)
+                if (containInPrefix(IpPrefix.valueOf("2a0b:4e07:c4:8::/64"), dstIp6Address)
                     || containOutIPv6Prefix(dstIp6Address)) {
                     log.info("Contain in routers");
                     log.info("Get from InterfaceService = {}", interfaceService.getInterfaces());
@@ -265,7 +265,7 @@ public class AppComponent implements SomeInterface {
         Ip4Address targetIP4Address = Ip4Address.valueOf(ipPayload.getDestinationAddress());
         log.info("External to SDN IPDST = {}", targetIP4Address.toString() + "/32");
 
-        if (containInPrefix(IpPrefix.valueOf("172.16.7.0/24"), targetIP4Address)) { // External to SDN
+        if (containInPrefix(IpPrefix.valueOf("172.16.8.0/24"), targetIP4Address)) { // External to SDN
             Host targetHost = hostService.getHostsByIp(targetIP4Address).iterator().next();
             FilteredConnectPoint ingressFilterPoint = new FilteredConnectPoint(pkt.receivedFrom());
             log.info("External to SDN ingress = {}", ingressFilterPoint);
@@ -339,7 +339,7 @@ public class AppComponent implements SomeInterface {
         Ip6Address targetIP6Address = Ip6Address.valueOf(ipPayload.getDestinationAddress());
         log.info("IPV6 External to SDN IPDST = {}", targetIP6Address.toString() + "/128");
 
-        if (containInPrefix(IpPrefix.valueOf("2a0b:4e07:c4:7::/64"), targetIP6Address)) { // External to SDN
+        if (containInPrefix(IpPrefix.valueOf("2a0b:4e07:c4:8::/64"), targetIP6Address)) { // External to SDN
             Host targetHost = hostService.getHostsByIp(targetIP6Address).iterator().next();
             FilteredConnectPoint ingressFilterPoint = new FilteredConnectPoint(pkt.receivedFrom());
             log.info("IPV6 External to SDN ingress = {}", ingressFilterPoint);
