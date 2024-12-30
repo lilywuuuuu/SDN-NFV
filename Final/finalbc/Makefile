@@ -49,6 +49,8 @@ deploy:
 	$(call remove_autoconf, R2, tr1)
 	docker exec -it R2 ip -6 addr add fd63::2/64 dev tr1
 	sudo ovs-vsctl add-port ovs2 TO_TA_VXLAN -- set interface TO_TA_VXLAN type=vxlan options:remote_ip=192.168.60.8
+	sudo ovs-vsctl add-port ovs2 TO_TEAM1_VXLAN -- set interface TO_TEAM1_VXLAN type=vxlan options:remote_ip=192.168.64.1 options:local_ip=192.168.64.3
+	sudo ovs-vsctl add-port ovs2 TO_TEAM2_VXLAN -- set interface TO_TEAM2_VXLAN type=vxlan options:remote_ip=192.168.64.5 options:local_ip=192.168.64.4
 
 	sudo ovs-docker add-port ovs2 tas h1 --ipaddress=172.16.8.2/24
 	$(call remove_autoconf, h1, tas)
