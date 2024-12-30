@@ -5,7 +5,7 @@ services:
     hostname: onos
     privileged: true
     environment:
-      - ONOS_APPS=drivers,fpm,gui2,hostprovider,lldpprovider,openflow,openflow-base,optical-model,route-service
+      - ONOS_APPS=drivers,openflow,gui2,route-service,fpm
     ports:
       - "2620:2620"
       - "6653:6653"
@@ -19,7 +19,7 @@ services:
     container_name: h1
     privileged: true
     build:
-      context: ./config
+      context: .
       dockerfile: host.Dockerfile
     cap_add:
       - NET_ADMIN
@@ -30,12 +30,13 @@ services:
     - |
       sleep infinity
 
+
   h2:
     image: host
     container_name: h2
     privileged: true
     build:
-      context: ./config
+      context: .
       dockerfile: host.Dockerfile
     cap_add:
       - NET_ADMIN
@@ -47,15 +48,10 @@ services:
       sleep infinity
 
   R1:
-    image: frr
+    image: frrouting/frr-debian
     container_name: R1
     hostname: R1
-    build:
-      context: ./config
-      dockerfile: frr.Dockerfile
     privileged: true
-    sysctls:
-      - net.ipv4.ip_forward=1
     cap_add:
       - NET_ADMIN
       - NET_BROADCAST
@@ -67,15 +63,13 @@ services:
       - ./config/R1/frr.conf:/etc/frr/frr.conf
   
   R2:
-    image: frr
+    image: frrouting/frr-debian
     container_name: R2
     hostname: R2
-    build:
-      context: ./config
-      dockerfile: frr.Dockerfile
     privileged: true
     sysctls:
       - net.ipv4.ip_forward=1
+      - net.ipv6.conf.all.forwarding=1
     cap_add:
       - NET_ADMIN
       - NET_BROADCAST
@@ -85,3 +79,4 @@ services:
     volumes:
       - ./config/daemons:/etc/frr/daemons
       - ./config/R2/frr.conf:/etc/frr/frr.conf
+
