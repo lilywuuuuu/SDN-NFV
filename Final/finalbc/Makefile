@@ -84,7 +84,7 @@ deploy:
 	docker exec -it h2 ip r add default via 172.17.8.1
 	docker exec -it h2 ip -6 route add default via 2a0b:4e07:c4:108::1
 
-	sleep 30
+	sleep 60
 	onos-netcfg localhost interface_config.json
 	onos-app localhost install! src/vrouter/target/vrouter-app-1.0-SNAPSHOT.oar
 	onos-app localhost install! src/ProxyArp/target/ProxyArp-1.0-SNAPSHOT.oar
